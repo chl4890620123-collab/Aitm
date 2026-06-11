@@ -1,0 +1,49 @@
+.analysis-workspace { width: 100%; }
+
+/* 단계 표시 (단순화) */
+.stepper { display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; }
+.step-n { padding: 10px 20px; border: 1px solid #ccc; background: #f0f0f0; font-size: 14px; color: #666; }
+.step-n.on { border-color: #000; background: #fff; color: #000; font-weight: bold; }
+
+/* 설정 카드 (단순화) */
+.config-grid-card { border: 1px solid #000; padding: 40px; max-width: 600px; margin: 0 auto; background: #fff; }
+.c-head h2 { font-size: 24px; margin: 0 0 10px; }
+.c-head p { color: #666; margin-bottom: 30px; }
+
+/* 입력 그룹 (단순화) */
+.input-group-modern { margin-bottom: 20px; }
+.input-group-modern label { display: block; font-size: 12px; margin-bottom: 5px; color: #333; }
+.input-group-modern input, .input-group-modern select { border: 1px solid #000; padding: 12px; font-size: 16px; width: 100%; box-sizing: border-box; }
+
+.input-row-modern { display: flex; gap: 15px; }
+.flex-2 { flex: 2; }
+.flex-1 { flex: 1; }
+
+/* 토글 버튼 (단순화) */
+.toggle-pill { display: flex; border: 1px solid #000; height: 45px; }
+.toggle-pill button { flex: 1; border: none; background: #eee; cursor: pointer; font-size: 14px; }
+.toggle-pill button.on { background: #000; color: #fff; }
+
+/* 소스 선택 (단순화) */
+.source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+.source-item { border: 1px solid #ccc; padding: 20px; text-align: center; cursor: pointer; background: #f9f9f9; }
+.source-item.on { border-color: #000; background: #eee; font-weight: bold; }
+
+/* 실행 버튼 (단순화) */
+.exec-btn { width: 100%; margin-top: 30px; background: #000; color: #fff; padding: 15px; border: none; font-size: 16px; cursor: pointer; }
+
+/* 미디어 영역 (단순화) */
+.media-shell { border: 1px solid #000; max-width: 800px; margin: 0 auto; background: #fff; }
+.webcam-box { width: 100%; aspect-ratio: 16/9; background: #000; }
+
+.file-drop-zone { width: 100%; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed #000; margin: 10px; box-sizing: border-box; }
+.drop-text { font-size: 16px; color: #000; }
+
+.shell-footer { padding: 20px; border-top: 1px solid #000; display: flex; justify-content: space-between; }
+.start-run-btn { background: #000; color: #fff; border: none; padding: 10px 30px; cursor: pointer; }
+.back-link { background: #eee; border: 1px solid #000; padding: 10px 20px; cursor: pointer; }
+
+/* 로딩 화면 (단순화) */
+.loading-stage { padding: 100px 0; text-align: center; }
+.loading-text h2 { margin-bottom: 10px; }
+.loading-text p { color: #666; }

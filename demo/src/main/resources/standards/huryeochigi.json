@@ -1,0 +1,8 @@
+{
+  "moveType": "huryeochigi",
+  "skillName": "후려치기",
+  "idealRotationSpeed": 450.0,
+  "idealLegExtension": 180.0,
+  "description": "회전력을 이용하여 발바닥이나 뒤축으로 상대를 가격하는 기술입니다.",
+  "injuryPreventionGuide": "회전 시 원심력에 의해 중심을 잃지 않도록 코어 근육을 긴장시키십시오. 타격 후 다리를 회수할 때 골반의 갑작스러운 비틀림을 방지해야 합니다."
+}

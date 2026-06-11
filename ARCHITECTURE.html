@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AITM 통합 시스템 아키텍처 대시보드</title>
+    <!-- Mermaid CDN (최신 안정 버전) -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e40af;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --accent: #38bdf8;
+        }
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            overflow-x: auto;
+        }
+        .dashboard-canvas {
+            min-width: 1800px;
+            background: var(--card);
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid #334155;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 25px;
+            margin-bottom: 30px;
+        }
+        h1 { font-size: 2.8rem; color: var(--accent); margin: 0; letter-spacing: -1px; }
+        .system-status { display: flex; gap: 15px; }
+        .status-tag { background: #0ea5e9; color: white; padding: 6px 15px; border-radius: 99px; font-weight: bold; font-size: 0.9rem; }
+
+        .mermaid-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 0;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 20px;
+            min-height: 500px;
+        }
+
+        .footer-specs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #334155;
+        }
+        .spec-card {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 5px solid var(--accent);
+        }
+        .spec-card h4 { color: var(--accent); margin: 0 0 10px 0; font-size: 1.2rem; }
+        .spec-card p { margin: 0; font-size: 0.9rem; color: #94a3b8; line-height: 1.6; }
+        
+        /* 다이어그램 내부 스타일 커스텀 */
+        .node rect { fill: #1e293b !important; stroke: #38bdf8 !important; stroke-width: 2px !important; }
+        .node .label { color: #f8fafc !important; }
+        .edgePath path { stroke: #94a3b8 !important; stroke-width: 2px !important; }
+
+        .btn-retry {
+            background: var(--accent);
+            color: #0f172a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .btn-retry:hover { background: #7dd3fc; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-canvas">
+    <header>
+        <div>
+            <h1>🥋 AITM INTEGRATED ARCHITECTURE MAP</h1>
+            <p style="color: #94a3b8; margin-top: 10px;">[촬영 → 분석 → 코칭 → 저장] 전 과정을 통합한 가로형 대형 시스템 지도</p>
+        </div>
+        <div class="system-status">
+            <div class="status-tag">WEB PWA</div>
+            <div class="status-tag">SPRING BOOT</div>
+            <div class="status-tag">FASTAPI AI</div>
+            <div class="status-tag">MARIADB</div>
+        </div>
+    </header>
+
+    <div class="mermaid-section">
+        <div id="mermaid-chart" class="mermaid">
+graph LR
+    %% 스타일 및 설정
+    classDef ui fill:#0c4a6e,stroke:#0ea5e9,stroke-width:3px,color:#fff;
+    classDef core fill:#064e3b,stroke:#10b981,stroke-width:3px,color:#fff;
+    classDef ai_layer fill:#431407,stroke:#f97316,stroke-width:3px,color:#fff;
+    classDef data_layer fill:#1e1b4b,stroke:#6366f1,stroke-width:3px,color:#fff;
+
+    %% 1단계: 사용자 인터페이스 (입력)
+    subgraph STAGE_1 ["📱 1. 사용자 화면 (React/Vite)"]
+        User((수련자)) --> FE["💻 프론트엔드 앱<br/>(UI/UX)"]
+        FE --> CAM["📸 웹캠 촬영/전처리<br/>(동작 캡처)"]
+    end
+
+    %% 2단계: 중앙 통제 및 보안 (처리)
+    subgraph STAGE_2 ["⚙️ 2. 중앙 컨트롤 (Spring Boot)"]
+        CAM -->|"(1) 분석 요청"<br/>"영상 데이터"| API["🔌 REST API 서버<br/>(Security/Session)"]
+        API --> SVC["🧠 분석 서비스 로직<br/>(Orchestration)"]
+    end
+
+    %% 3단계: AI 분석 및 코칭 (지능)
+    subgraph STAGE_3 ["🤖 3. AI 선생님 (FastAPI/RAG)"]
+        SVC -->|"(2) 역학 데이터 위임"<br/>"물리 수치 추출"| FAST["⚡ FastAPI AI 엔진<br/>(LangChain)"]
+        FAST --> RAG["🔍 지식 검색/대조<br/>(FAISS Vector DB)"]
+        RAG --> LLM["🧠 OpenAI GPT 분석<br/>(마스터 코칭 생성)"]
+    end
+
+    %% 4단계: 데이터 영속화 (저장)
+    subgraph STAGE_4 ["💾 4. 데이터 저장 (MariaDB)"]
+        LLM -->|"(3) 분석 결과 반환"<br/>"Feedback Data"| SVC
+        SVC --> DB_SAVE["💾 DB 영속화 프로세스<br/>(JPA Repository)"]
+        DB_SAVE --> MDB[("🗄️ MariaDB 저장소<br/>(History/Standard)")]
+        MDB -->|"(4) 최종 리포트 반환"| FE
+    end
+
+    %% 함축적 데이터 정보
+    DATA_IN["📥 입력 데이터:<br/>MP4 영상 / 기술명"] -.-> FE
+    PHYSICS["📏 분석 데이터:<br/>각도/가속도/점프"] -.-> FAST
+    KNOWLEDGE["📖 지식 데이터:<br/>태권도 교본/기준"] -.-> RAG
+    REPORT["📄 결과 데이터:<br/>점수/AI 코칭"] -.-> MDB
+
+    %% 클래스 적용
+    class FE,CAM ui;
+    class API,SVC,DB_SAVE core;
+    class FAST,RAG,LLM ai_layer;
+    class MDB data_layer;
+
+    %% 링크 스타일
+    linkStyle default stroke:#64748b,stroke-width:2px;
+        </div>
+        <div id="fallback-text" style="display:none; color:#f87171; text-align:center;">
+            <h3>⚠️ 도표를 불러오지 못했습니다.</h3>
+            <p>인터넷 연결을 확인하거나 Chrome/Edge 브라우저를 사용해 주세요.</p>
+            <p>다이어그램 라이브러리(Mermaid) 로딩에 실패했을 가능성이 있습니다.</p>
+            <button class="btn-retry" onclick="location.reload()">페이지 새로고침</button>
+        </div>
+    </div>
+
+    <div class="footer-specs">
+        <div class="spec-card">
+            <h4>📱 Client Spec</h4>
+            <p>React 18 & Vite를 사용하여 고성능 웹 환경을 제공하며, 사용자 동작을 실시간으로 캡처하여 백엔드로 전달합니다.</p>
+        </div>
+        <div class="spec-card">
+            <h4>⚙️ Backend Spec</h4>
+            <p>Spring Boot 3 & JPA를 통해 비즈니스 로직을 처리하고, AI 서비스와의 보안 통신을 총괄하며 데이터를 관리합니다.</p>
+        </div>
+        <div class="spec-card">
+            <h4>🤖 AI Engine Spec</h4>
+            <p>FastAPI & LangChain 기반의 RAG 아키텍처를 사용하여 태권도 지식 베이스와 연동된 정밀 코칭을 생성합니다.</p>
+        </div>
+        <div class="spec-card">
+            <h4>💾 Database Spec</h4>
+            <p>MariaDB와 FAISS Vector DB를 병용하여 정형 데이터(분석 이력)와 비정형 데이터(벡터 지식)를 모두 수용합니다.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            if (typeof mermaid !== 'undefined') {
+                mermaid.initialize({ 
+                    startOnLoad: true, 
+                    theme: 'dark',
+                    flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' }
+                });
+                
+                // 3초 후에도 SVG가 생성되지 않으면 실패로 간주
+                setTimeout(function() {
+                    const svg = document.querySelector('#mermaid-chart svg');
+                    if (!svg) {
+                        showFallback();
+                    }
+                }, 3000);
+            } else {
+                showFallback();
+            }
+        } catch (e) {
+            console.error('Mermaid initialization failed:', e);
+            showFallback();
+        }
+    });
+
+    function showFallback() {
+        document.getElementById('mermaid-chart').style.display = 'none';
+        document.getElementById('fallback-text').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>

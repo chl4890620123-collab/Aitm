@@ -1,0 +1,8 @@
+{
+  "moveType": "dwichigi",
+  "skillName": "뒤차기",
+  "idealKneeAngle": 10.0,
+  "idealHipExtension": 170.0,
+  "description": "상대를 등지고 강력한 직선 공격을 가하는 기술입니다.",
+  "injuryPreventionGuide": "허리의 과도한 신전을 피하고, 타격 시 고개를 무리하게 돌리지 않도록 주의하십시오. 지지하는 발의 무릎을 살짝 굽혀 충격을 분산시키세요."
+}

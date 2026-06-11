@@ -1,0 +1,38 @@
+# Project
+.env
+.env.local
+*.log
+
+# Docker
+.docker/
+
+# Java / Maven
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+**/*.ear
+.mvn/wrapper/maven-wrapper.jar
+
+# Node / Frontend
+**/node_modules/
+**/dist/
+.eslintcache
+
+# Python / AI
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.venv/
+**/venv/
+**/env/
+**/.env
+**/.pytest_cache/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.DS_Store

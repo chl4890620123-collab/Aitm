@@ -1,0 +1,8 @@
+{
+  "skillName": "돌개치기",
+  "idealShoulderAccel": 150.0,
+  "idealHandCompactness": 98.0,
+  "idealKneeTransitionMs": 130,
+  "description": "마스터급 돌개치기의 물리적 표준 지표입니다.",
+  "injuryPreventionGuide": "착지 시 무릎의 외반(Valgus) 스트레스를 줄이기 위해 발끝 방향과 무릎 방향을 일치시키십시오. 충격 흡수를 위해 발바닥 전체보다는 앞꿈치부터 지면에 닿아야 합니다."
+}

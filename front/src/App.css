@@ -1,0 +1,67 @@
+body { 
+  margin: 0; 
+  background: #f4f4f4; 
+  color: #000; 
+  font-family: sans-serif; 
+}
+
+.master-container { display: flex; min-height: 100vh; }
+
+/* 사이드바 (단순화) */
+.side-dock { 
+  width: 200px; 
+  background: #fff; 
+  border-right: 1px solid #000; 
+  display: flex; 
+  flex-direction: column; 
+  padding: 30px 0; 
+  position: sticky; 
+  top: 0; 
+  height: 100vh; 
+}
+
+.dock-logo { 
+  font-size: 20px; 
+  font-weight: bold; 
+  text-align: center; 
+  margin-bottom: 40px; 
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+
+.dock-nav { display: flex; flex-direction: column; width: 100%; }
+.dock-nav button { 
+  background: none; 
+  border: none; 
+  color: #666; 
+  cursor: pointer; 
+  padding: 15px 20px;
+  text-align: left;
+  font-size: 14px;
+}
+.dock-nav button.active { 
+  color: #000; 
+  background: #eee;
+  font-weight: bold;
+}
+
+/* 메인 영역 (단순화) */
+.main-viewport { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.system-bar { 
+  height: 60px; 
+  border-bottom: 1px solid #000; 
+  display: flex; 
+  align-items: center; 
+  padding: 0 30px; 
+  background: #fff; 
+}
+
+.sys-path { font-size: 14px; color: #333; }
+
+.viewport-content { 
+  padding: 40px; 
+  flex: 1; 
+  width: 100%; 
+  box-sizing: border-box; 
+}

@@ -1,0 +1,46 @@
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: aitm-db
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_DATABASE: restok_db
+      MYSQL_ROOT_PASSWORD: ${RESTOK_DB_PASSWORD:-1234}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  core-backend:
+    build: ./demo
+    container_name: aitm-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mariadb
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/restok_db
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${RESTOK_DB_PASSWORD:-1234}
+      RESTOK_AI_ENGINE_URL: http://ai-service:8000/analyze-full
+      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN}
+
+  ai-service:
+    build: ./demo/ai
+    container_name: aitm-ai
+    ports:
+      - "8000:8000"
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN}
+      BACKEND_URL: http://core-backend:8080
+
+  front-end:
+    build: ./front
+    container_name: aitm-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - core-backend
+
+volumes:
+  mariadb_data:

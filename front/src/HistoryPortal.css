@@ -1,0 +1,20 @@
+.history-portal { color: #000; }
+
+.portal-header { border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
+.portal-header h1 { font-size: 28px; margin: 0; }
+.portal-header p { color: #666; margin: 10px 0 0; }
+
+.history-table { width: 100%; border-collapse: collapse; background: #fff; }
+.history-table th { background: #eee; border: 1px solid #ccc; padding: 12px; text-align: left; font-size: 14px; }
+.history-table td { border: 1px solid #ccc; padding: 12px; font-size: 14px; }
+
+.h-score { font-weight: bold; color: #000; }
+.h-skill { font-weight: bold; }
+.h-info { color: #666; }
+
+.h-actions { display: flex; gap: 10px; }
+.h-actions button { background: #fff; border: 1px solid #000; padding: 6px 12px; cursor: pointer; }
+.h-actions button.del-btn { color: #cc0000; border-color: #cc0000; }
+
+.no-data-msg { padding: 50px; text-align: center; border: 1px dashed #ccc; background: #f9f9f9; }
+.portal-loading { padding: 100px; text-align: center; font-size: 18px; }
