@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './HistoryPortal.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const HistoryPortal = ({ standards, onViewDetail }) => {
   const [history, setHistory] = useState([]);
