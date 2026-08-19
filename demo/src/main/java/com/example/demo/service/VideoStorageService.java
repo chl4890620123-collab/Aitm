@@ -15,6 +15,10 @@ import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +27,9 @@ public class VideoStorageService {
 
     @Value("${restok.video.storage-path:/data/videos}")
     private String storagePath;
+
+    @Value("${restok.video.signing-key}")
+    private String signingKey;
 
     public StoredVideo store(MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("Video file is empty");
@@ -45,6 +52,23 @@ public class VideoStorageService {
         Path target = root.resolve(storedName).normalize();
         if (!target.startsWith(root) || !Files.exists(target)) throw new IOException("Video not found");
         return new UrlResource(target.toUri());
+    }
+
+    public String sign(String storedName) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(signingKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return HexFormat.of().formatHex(mac.doFinal(storedName.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not sign video URL", e);
+        }
+    }
+
+    public boolean hasValidSignature(String storedName, String signature) {
+        if (signature == null) return false;
+        return java.security.MessageDigest.isEqual(
+                sign(storedName).getBytes(StandardCharsets.UTF_8),
+                signature.getBytes(StandardCharsets.UTF_8));
     }
 
     private String extensionOf(String name) {
