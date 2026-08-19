@@ -22,7 +22,7 @@ docker compose ps
 ```
 
 - 웹: `http://localhost:5173`
-- API: `http://localhost:8080`
+- API: `http://localhost:5173/api` (Nginx 내부 프록시)
 - DB 데이터: `C:\AITM\data\mariadb`
 - 녹화 및 업로드 영상: `C:\AITM\data\videos`
 
