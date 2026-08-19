@@ -1,59 +1,42 @@
 # AITM (AI Taekwondo Master)
 
-태권도 동작 분석 및 기술 지식 관리 플랫폼입니다. AI를 활용하여 수련자의 동작을 분석하고, 운동 역학 기반의 전문적인 피드백을 제공합니다.
+카메라 녹화, 파일 업로드 또는 허용된 직접 영상 URL에서 자세 랜드마크를 추출하고 태권도 기술 피드백을 제공하는 플랫폼입니다.
 
-## 🏗️ 시스템 아키텍처
+## 영상 정책
 
-본 프로젝트는 3계층 마이크로서비스 아키텍처로 구성되어 있습니다. 상세 구조는 [ARCHITECTURE.html](./ARCHITECTURE.html) 파일을 참고하세요.
+- 카메라 및 사용 허가된 파일은 영속 영상 디렉터리에 저장됩니다.
+- YouTube URL은 공식 임베드 플레이어를 통한 참조 재생만 지원하며 다운로드하거나 학습 데이터로 복제하지 않습니다.
+- 외부 직접 영상 URL 분석은 `RESTOK_VIDEO_ALLOWED_HOSTS`에 등록된 호스트만 허용됩니다.
+- 협회 영상을 분석 데이터로 사용하려면 권리자로부터 별도 허가받은 원본 파일을 업로드하십시오.
 
-1.  **Client Zone (React PWA):** 사용자 인터페이스 및 분석 엔진 UI (`/front`)
-2.  **Core Backend (Spring Boot):** 비즈니스 로직 및 데이터 관리 (`/demo`)
-3.  **AI Service (FastAPI):** LangChain RAG 기반 동작 분석 및 코칭 생성 (`/demo/ai`)
+## Windows Docker Desktop 배포
 
-## 🚀 시작하기
+1. `.env.example`을 `.env`로 복사합니다.
+2. `RESTOK_DB_PASSWORD`, `RESTOK_AI_SECURE_TOKEN`, `OPENAI_API_KEY`를 설정합니다.
+3. 기본 저장 위치는 `C:/AITM/data`입니다. 다른 위치는 `AITM_DATA_ROOT`로 변경합니다.
+4. 실행합니다.
 
-### Prerequisites
-- Java 17+
-- Node.js 18+
-- Python 3.9+
-- MariaDB
-
-### 서비스별 기동 방법
-
-#### 1. MariaDB 설정
-- 포트: `3308`
-- DB명: `restok_db`
-- 사용자/암호: `root` / `1234` (또는 환경변수 설정)
-
-#### 2. Core Backend (Spring Boot)
-```bash
-cd demo
-./mvnw spring-boot:run
+```powershell
+docker compose up --build -d
+docker compose ps
 ```
-- API 주소: `http://localhost:8080`
 
-#### 3. AI Service (FastAPI)
-```bash
-cd demo/ai
-pip install -r requirements.txt
-python main.py
-```
-- API 주소: `http://localhost:8000`
-- 환경변수 필요: `OPENAI_API_KEY`, `RESTOK_AI_SECURE_TOKEN`
+- 웹: `http://localhost:5173`
+- API: `http://localhost:8080`
+- DB 데이터: `C:\AITM\data\mariadb`
+- 녹화 및 업로드 영상: `C:\AITM\data\videos`
 
-#### 4. Frontend (React)
-```bash
-cd front
-npm install
-npm run dev
-```
-- 웹 주소: `http://localhost:5173`
+## 분석과 점수
 
-## 🛠️ 주요 기술 스택
-- **Frontend:** React, Vite, Axios, TailwindCSS (추천)
-- **Backend:** Spring Boot, JPA, MariaDB, REST API
-- **AI Engine:** FastAPI, LangChain, OpenAI GPT-4o-mini, FAISS (Vector DB)
+FastAPI가 OpenCV와 MediaPipe로 프레임별 포즈 랜드마크를 추출합니다. 최종 점수는 회전속도를 사용하지 않습니다.
 
-## 📄 문서
-- [시스템 아키텍처 다이어그램](./ARCHITECTURE.html)
-- [프로젝트 개발 규칙](./GEMINI.md)
+- 어깨 가속도 20%
+- 상체 추진력 20%
+- 손발 동작 동기화 30%
+- 착지 안정성 30%
+
+측정할 수 없는 지표는 제외하고 남은 가중치를 재정규화합니다. 현재 수치는 단안 카메라 정규화 좌표 기반이므로 공식 평가에 사용하기 전 촬영 거리, 신체 치수 및 검증 데이터셋을 통한 보정이 필요합니다.
+
+## 근거 기반 RAG
+
+기술 표준과 코칭 지식을 MariaDB API에서 읽어 FAISS로 검색합니다. 관련 근거가 없으면 코칭을 생성하지 않으며, 생성된 코칭은 사용한 근거 ID를 응답에 포함합니다. 인덱스는 `RAG_CACHE_SECONDS` 주기로 갱신됩니다.
