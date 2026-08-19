@@ -40,8 +40,8 @@ const HistoryPortal = ({ standards, onViewDetail }) => {
   return (
     <div className="history-portal">
       <div className="portal-header">
-        <h1>Analysis History</h1>
-        <p>과거 분석 세션 데이터를 관리합니다.</p>
+        <span className="section-kicker">나의 성장 기록</span><h1>분석 기록</h1>
+        <p>이전 동작의 점수와 코칭을 다시 확인할 수 있어요.</p>
       </div>
       
       <div className="portal-list">
@@ -49,10 +49,7 @@ const HistoryPortal = ({ standards, onViewDetail }) => {
           <table className="history-table">
             <thead>
               <tr>
-                <th>Score</th>
-                <th>Skill</th>
-                <th>Timestamp / Source</th>
-                <th>Actions</th>
+                <th>점수</th><th>기술</th><th>분석 영상</th><th>관리</th>
               </tr>
             </thead>
             <tbody>
@@ -66,8 +63,8 @@ const HistoryPortal = ({ standards, onViewDetail }) => {
                     {new Date().toLocaleDateString()} / {h.videoUrl?.split('/').pop().substring(0, 30)}
                   </td>
                   <td className="h-actions">
-                    <button onClick={() => onViewDetail(h)}>View Report</button>
-                    <button className="del-btn" onClick={() => deleteHistory(h.resultId)}>Delete</button>
+                    <button onClick={() => onViewDetail(h)}>결과 보기</button>
+                    <button className="del-btn" onClick={() => deleteHistory(h.resultId)}>삭제</button>
                   </td>
                 </tr>
               ))}
