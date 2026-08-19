@@ -56,5 +56,8 @@ services:
     restart: unless-stopped
     ports:
       - "5173:80"
+    environment:
+      AITM_APP_USERNAME: ${AITM_APP_USERNAME:?AITM_APP_USERNAME is required}
+      AITM_APP_PASSWORD: ${AITM_APP_PASSWORD:?AITM_APP_PASSWORD is required}
     depends_on:
       - core-backend
