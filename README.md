@@ -39,4 +39,4 @@ FastAPI가 OpenCV와 MediaPipe로 프레임별 포즈 랜드마크를 추출합�
 
 ## 근거 기반 RAG
 
-기술 표준과 코칭 지식을 MariaDB API에서 읽어 FAISS로 검색합니다. 관련 근거가 없으면 코칭을 생성하지 않으며, 생성된 코칭은 사용한 근거 ID를 응답에 포함합니다. 인덱스는 `RAG_CACHE_SECONDS` 주기로 갱신됩니다.
+기술 표준과 코칭 지식을 MariaDB API에서 읽고 Docker 내부에서 먼저 검색합니다. `ALLOW_OPENAI_EGRESS=true`일 때만 검색된 최소 근거와 측정 수치를 OpenAI에 보내며 원본 영상과 이미지는 보내지 않습니다. OpenAI가 비활성화되거나 실패하면 로컬 검색·규칙 엔진이 자동으로 코칭을 생성합니다. 관련 근거 ID가 응답에 포함되고 지식 캐시는 `RAG_CACHE_SECONDS` 주기로 갱신됩니다.
