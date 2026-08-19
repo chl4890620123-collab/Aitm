@@ -6,7 +6,7 @@ import './KnowledgeManager.css';
  * 기술 지식 및 표준 관리 컴포넌트
  * 새로운 기술을 등록하거나 기존 기술의 채점 기준을 수정할 수 있는 관리자 화면입니다.
  */
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const KnowledgeManager = ({ onDataChange }) => {
   // 기술 표준 목록
