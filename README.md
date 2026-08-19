@@ -12,7 +12,7 @@
 ## Windows Docker Desktop 배포
 
 1. `.env.example`을 `.env`로 복사합니다.
-2. `RESTOK_DB_PASSWORD`, `RESTOK_AI_SECURE_TOKEN`, `OPENAI_API_KEY`를 설정합니다.
+2. `AITM_APP_USERNAME`, `AITM_APP_PASSWORD`, `RESTOK_DB_PASSWORD`, `RESTOK_AI_SECURE_TOKEN`, `RESTOK_VIDEO_SIGNING_KEY`, `OPENAI_API_KEY`를 설정합니다.
 3. 기본 저장 위치는 `C:/AITM/data`입니다. 다른 위치는 `AITM_DATA_ROOT`로 변경합니다.
 4. 실행합니다.
 
@@ -25,6 +25,8 @@ docker compose ps
 - API: `http://localhost:8080`
 - DB 데이터: `C:\AITM\data\mariadb`
 - 녹화 및 업로드 영상: `C:\AITM\data\videos`
+
+웹과 `/api`는 HTTP Basic 인증으로 보호됩니다. MariaDB, Spring, FastAPI 포트는 호스트에 공개되지 않으며 Docker 내부 네트워크에서만 통신합니다.
 
 ## 분석과 점수
 
