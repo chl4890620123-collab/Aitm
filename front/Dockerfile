@@ -1,4 +1,3 @@
-# Build stage
 FROM node:20-slim AS build
 WORKDIR /app
 COPY package*.json ./
@@ -6,9 +5,11 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Run stage
 FROM nginx:alpine
+RUN apk add --no-cache apache2-utils
 COPY --from=build /app/dist /usr/share/nginx/html
-# Vite default is 5173, but nginx is 80
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker-entrypoint-auth.sh /docker-entrypoint-auth.sh
+RUN chmod 755 /docker-entrypoint-auth.sh
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/docker-entrypoint-auth.sh"]

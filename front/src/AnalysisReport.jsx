@@ -1,86 +1,28 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import './AnalysisReport.css';
 
-/**
- * AI 분석 결과 시각화 및 피드백 리포트 컴포넌트
- */
 const AnalysisReport = ({ data, standards, onReset }) => {
+  const videoRef = useRef(null);
+  const [rate, setRate] = useState(0.5);
   if (!data) return null;
-
-  // 점수 구간별 기술 숙련도 매핑
-  const getTierInfo = (score) => {
-    const s = score || 0;
-    if (s >= 95) return { label: "마스터", desc: "태권도 정점 수준의 기술 완성도입니다." };
-    if (s >= 85) return { label: "우수", desc: "매우 안정적이고 강력한 동작을 구사합니다." };
-    if (s >= 75) return { label: "심화", desc: "기술의 메커니즘을 정확히 이해하고 있습니다." };
-    if (s >= 65) return { label: "보통", desc: "기본기가 탄탄하며 실전 활용이 가능한 수준입니다." };
-    if (s >= 50) return { label: "기초", desc: "지속적인 반복 숙달과 기본기 교정이 필요합니다." };
-    return { label: "미흡", desc: "동작의 기초 원리부터 재학습을 권장합니다." };
-  };
-
-  const skillName = standards.find(s => s.moveType === data.moveType)?.skillName || data.moveType;
-  const tier = getTierInfo(data.totalScore);
-
-  return (
-    <div className="detailed-report-view">
-      <header className="report-main-header">
-        <div className="skill-label-box">
-          <p className="report-type-label">Kinematics Analysis Report</p>
-          <h1 className="main-skill-name">{skillName}</h1>
-        </div>
-        <div className="header-actions">
-          <button className="new-session-btn" onClick={onReset}>New Session</button>
-        </div>
-      </header>
-
-      <div className="report-content">
-        {/* 점수 및 티어 요약 */}
-        <section className="score-summary">
-          <div className="score-box">
-            <h2>Total Score: {Math.round(data.totalScore || 0)}</h2>
-            <div className="tier-info">
-              <span className="tier-label">판정결과: {tier.label}</span>
-              <p className="tier-desc">{tier.desc}</p>
-            </div>
-          </div>
-        </section>
-
-        <div className="report-data-grid">
-          {/* RAG 생성 피드백 섹션 */}
-          <section className="ai-feedback-section">
-            <h3>AI Master Coaching</h3>
-            <div className="feedback-box">
-              <p>{data.aiFeedback}</p>
-            </div>
-          </section>
-
-          {/* 주요 물리 지표 테이블 */}
-          <section className="physics-data-section">
-            <h3>Biomechanical Metrics</h3>
-            <div className="metrics-table">
-              <MetricItem label="어깨 가속도" value={data.shoulderAccel} unit="rad/s²" />
-              <MetricItem label="상체 추진력" value={data.upperBodyMomentum} unit="kg·m/s" />
-              <MetricItem label="최대 각속도" value={data.rotationAngularVelocity} unit="deg/s" />
-              <MetricItem label="총 회전수" value={(data.totalRotationDeg || 0) / 360} unit="바퀴" decimals={1} />
-              <MetricItem label="무릎 수축 속도" value={data.kneeTuckTransitionMs} unit="ms" />
-              <MetricItem label="수직 도약 높이" value={data.jumpBoostHeightCm} unit="cm" />
-              <MetricItem label="시선-타격 동기화" value={data.timingSyncScore} unit="%" />
-              <MetricItem label="착지 안정성" value={data.landingStabilityScore} unit="/ 100" />
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
+  const skillName = standards.find((s) => s.moveType === data.moveType)?.skillName || data.moveType;
+  const changeRate = (next) => { setRate(next); if (videoRef.current) videoRef.current.playbackRate = next; };
+  const frame = (direction) => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime + direction / (data.videoFps || 30)); };
+  return <div className="detailed-report-view">
+    <header className="report-main-header"><div><span className="section-kicker">분석이 완료됐어요</span><h1>{skillName}</h1><p>측정 결과와 AI 코칭을 천천히 확인해 보세요.</p></div><button className="new-session-btn" onClick={onReset}>새 동작 분석</button></header>
+    <section className="score-summary"><span>종합 동작 점수</span><h2>{Math.round(data.totalScore || 0)}<small> / 100</small></h2><p>가속도·추진력·동기화·착지 안정성을 종합한 점수예요.</p></section>
+    {data.playbackUrl && <section className="review-section"><div className="section-title"><h3>슬로 모션으로 다시 보기</h3><p>배속과 프레임 버튼으로 자세를 세밀하게 확인하세요.</p></div><video ref={videoRef} src={data.playbackUrl.startsWith('/') ? `${import.meta.env.VITE_API_BASE_URL || ''}${data.playbackUrl}` : data.playbackUrl} controls width="100%" onLoadedMetadata={() => changeRate(rate)} /><div className="review-controls"><button onClick={() => frame(-1)}>◀ 이전 프레임</button>{[0.25, 0.5, 1].map((value) => <button className={rate === value ? 'active' : ''} key={value} onClick={() => changeRate(value)}>{value}×</button>)}<button onClick={() => frame(1)}>다음 프레임 ▶</button></div></section>}
+    <div className="report-grid"><section className="ai-feedback-section"><div className="section-title"><h3>AI 코치의 한마디</h3><p>등록된 기술 기준에 근거한 개선 안내예요.</p></div><div className="coach-message"><span>AI</span><p>{data.aiFeedback}</p></div>{data.ragEvidence?.length > 0 && <small className="evidence">사용 근거: {data.ragEvidence.map((item) => `${item.source}:${item.id}`).join(', ')}</small>}</section>
+    <section className="physics-data-section"><div className="section-title"><h3>자세히 측정한 항목</h3><p>값이 높을수록 기준 동작에 가까워요.</p></div><div className="metrics-table">
+      <Metric label="어깨 가속도" value={data.shoulderAccel} unit="normalized" />
+      <Metric label="상체 추진력" value={data.upperBodyMomentum} unit="normalized" />
+      <Metric label="동작 동기화" value={data.timingSyncScore} unit="/ 100" />
+      <Metric label="착지 안정성" value={data.landingStabilityScore} unit="/ 100" />
+      <Metric label="무릎 전환" value={data.kneeTuckTransitionMs} unit="ms" />
+      <Metric label="분석 프레임" value={data.analyzedFrames} unit="frames" />
+    </div></section></div>
+  </div>;
 };
 
-const MetricItem = ({ label, value, unit, decimals = 0 }) => (
-  <div className="metric-item">
-    <span className="metric-label">{label}</span>
-    <span className="metric-value">
-      {decimals > 0 ? Number(value || 0).toFixed(decimals) : Math.round(value || 0)} {unit}
-    </span>
-  </div>
-);
-
+const Metric = ({ label, value, unit }) => <div className="metric-item"><span>{label}</span><strong>{value == null ? 'N/A' : Math.round(value)} {unit}</strong></div>;
 export default AnalysisReport;
