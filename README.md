@@ -104,10 +104,10 @@ docker compose up --build
 python VERIFY_SYSTEM.py
 ```
 
-실제 샘플 영상까지 AI 통합 테스트하려면:
+실제 샘플 영상까지 전체 업로드 → Pose 분석 → 점수 계산 → DB 저장 흐름을 테스트하려면:
 
 ```bash
-AITM_SAMPLE_VIDEO=/path/to/sample.mp4 RESTOK_AI_SECURE_TOKEN=... python VERIFY_SYSTEM.py
+AITM_SAMPLE_VIDEO=/path/to/sample.mp4 python VERIFY_SYSTEM.py
 ```
 
 ## 보안 원칙
