@@ -59,6 +59,8 @@ docker compose up --build
 - AI health: `http://localhost:8000/health`
 - MariaDB host port: `3308`
 
+> 카메라 촬영은 브라우저 보안 정책상 `localhost` 또는 HTTPS 환경에서 사용하세요. 외부 도메인으로 배포할 때는 HTTPS가 필요합니다.
+
 ## 사용 방법
 
 1. `분석`에서 기술을 선택합니다.

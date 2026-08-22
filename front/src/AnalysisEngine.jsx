@@ -159,6 +159,7 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
   };
 
   const selectedSkill = standards.find((item) => item.moveType === formData.moveType);
+  const cameraSecure = window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
   return (
     <div className="analysis-page">
@@ -209,6 +210,7 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
         <section className="panel capture-panel">
           {sourceType === 'camera' && (
             <>
+              {!cameraSecure && <div className="inline-error">카메라 촬영은 HTTPS 또는 localhost 환경이 필요합니다.</div>}
               {!previewUrl && (
                 <div className="camera-frame">
                   <Webcam

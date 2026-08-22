@@ -8,8 +8,8 @@ services:
     environment:
       MARIADB_DATABASE: aitm_db
       MARIADB_USER: aitm
-      MARIADB_PASSWORD: ${AITM_DB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${AITM_DB_ROOT_PASSWORD}
+      MARIADB_PASSWORD: ${AITM_DB_PASSWORD:?Set AITM_DB_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${AITM_DB_ROOT_PASSWORD:?Set AITM_DB_ROOT_PASSWORD in .env}
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
@@ -30,9 +30,9 @@ services:
     environment:
       RESTOK_DB_URL: jdbc:mariadb://mariadb:3306/aitm_db
       RESTOK_DB_USER: aitm
-      RESTOK_DB_PASSWORD: ${AITM_DB_PASSWORD}
+      RESTOK_DB_PASSWORD: ${AITM_DB_PASSWORD:?Set AITM_DB_PASSWORD in .env}
       RESTOK_AI_ENGINE_URL: http://ai-service:8000/analyze-full
-      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN}
+      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN:?Set RESTOK_AI_SECURE_TOKEN in .env}
       AITM_VIDEO_DIR: /data/videos
       AITM_ALLOWED_VIDEO_HOSTS: ${AITM_ALLOWED_VIDEO_HOSTS:-storage.googleapis.com}
     volumes:
@@ -46,7 +46,7 @@ services:
       - "8000:8000"
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN}
+      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN:?Set RESTOK_AI_SECURE_TOKEN in .env}
       BACKEND_URL: http://core-backend:8080
       POSE_MODEL_PATH: /app/models/pose_landmarker_full.task
       AITM_MAX_ANALYSIS_SECONDS: 30
