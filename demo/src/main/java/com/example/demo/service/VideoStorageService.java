@@ -1,6 +1,8 @@
 package com.example.demo.service;
 
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,6 +17,7 @@ import java.util.UUID;
 
 @Service
 public class VideoStorageService {
+    private static final Logger log = LoggerFactory.getLogger(VideoStorageService.class);
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("mp4", "mov", "avi", "webm", "mkv");
 
     private final Path videoDirectory;
@@ -41,7 +44,15 @@ public class VideoStorageService {
             throw new IllegalArgumentException("영상 파일은 500MB 이하만 업로드할 수 있습니다.");
         }
 
-        String extension = extractExtension(file.getOriginalFilename(), file.getContentType());
+        String contentType = file.getContentType();
+        if (contentType != null
+                && !contentType.isBlank()
+                && !contentType.toLowerCase(Locale.ROOT).startsWith("video/")
+                && !"application/octet-stream".equalsIgnoreCase(contentType)) {
+            throw new IllegalArgumentException("영상 MIME 형식만 업로드할 수 있습니다.");
+        }
+
+        String extension = extractExtension(file.getOriginalFilename(), contentType);
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             throw new IllegalArgumentException("지원하지 않는 영상 형식입니다: " + extension);
         }
@@ -65,6 +76,29 @@ public class VideoStorageService {
                 file.getSize(),
                 extension
         );
+    }
+
+    public boolean deletePlaybackUrl(String playbackUrl) {
+        if (playbackUrl == null || !playbackUrl.startsWith("/media/")) {
+            return false;
+        }
+
+        String fileName = playbackUrl.substring("/media/".length());
+        if (fileName.isBlank() || fileName.contains("/") || fileName.contains("\\")) {
+            return false;
+        }
+
+        Path target = videoDirectory.resolve(fileName).normalize();
+        if (!target.startsWith(videoDirectory)) {
+            return false;
+        }
+
+        try {
+            return Files.deleteIfExists(target);
+        } catch (IOException ex) {
+            log.warn("Failed to delete stored video: {}", target, ex);
+            return false;
+        }
     }
 
     private String extractExtension(String originalFilename, String contentType) {

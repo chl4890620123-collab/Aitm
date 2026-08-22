@@ -116,6 +116,23 @@ def _event(time_sec: float, label: str, detail: str, severity: str, metric: str,
     }
 
 
+def _overlay_points(landmarks: List[Any]) -> Dict[str, List[float]]:
+    points = {}
+    for name, index in {
+        "ls": LEFT_SHOULDER,
+        "rs": RIGHT_SHOULDER,
+        "lh": LEFT_HIP,
+        "rh": RIGHT_HIP,
+        "lk": LEFT_KNEE,
+        "rk": RIGHT_KNEE,
+        "la": LEFT_ANKLE,
+        "ra": RIGHT_ANKLE,
+    }.items():
+        lm = landmarks[index]
+        points[name] = [round(float(lm.x), 4), round(float(lm.y), 4), round(float(getattr(lm, "visibility", 1.0)), 3)]
+    return points
+
+
 def _landing_index(times: np.ndarray, hip_y: np.ndarray, apex: int, body_height: float) -> int:
     baseline = float(np.median(hip_y[:max(2, len(hip_y) // 5)]))
     tolerance = max(0.01, body_height * 0.08)
@@ -149,7 +166,7 @@ def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
         min_tracking_confidence=0.5,
     )
 
-    records: List[Dict[str, float]] = []
+    records: List[Dict[str, Any]] = []
     sampled = detected = 0
     min_margin = 1.0
     try:
@@ -200,6 +217,7 @@ def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
                     "bodyHeight": max(0.05, float(np.linalg.norm(shoulder[:2] - ankle[:2]))),
                     "shoulderTilt": math.degrees(math.atan2(float(line[1]), float(line[0]))),
                     "visibility": _visibility(normalized),
+                    "overlay": _overlay_points(normalized),
                 })
     finally:
         capture.release()
@@ -299,6 +317,11 @@ def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
             timing_score,
         ))
 
+    overlay_frames = [
+        {"timeSec": round(float(row["time"]), 2), "points": row["overlay"]}
+        for row in records[::max(1, len(records) // 120)]
+    ]
+
     return {
         "preLoadingFlexDeg": round(float(np.median(knee[:max(2, len(knee) // 5)])), 1),
         "jumpBoostHeightCm": None,
@@ -321,4 +344,5 @@ def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
         "analysisConfidence": confidence,
         "analysisEventsJson": json.dumps(sorted(events, key=lambda row: row["timeSec"]), ensure_ascii=False),
         "qualityWarningsJson": json.dumps(warnings, ensure_ascii=False),
+        "poseFramesJson": json.dumps(overlay_frames, ensure_ascii=False),
     }

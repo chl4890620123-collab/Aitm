@@ -21,7 +21,9 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -34,6 +36,8 @@ public class AnalysisService {
     private final TechnicalStandardRepository standardRepository;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final ScoreCalculator scoreCalculator;
+    private final VideoStorageService videoStorageService;
 
     @Value("${restok.ai.secure-token}")
     private String secureToken;
@@ -70,6 +74,9 @@ public class AnalysisService {
             throw new IllegalStateException("AI 분석 엔진이 결과를 반환하지 않았습니다.");
         }
 
+        StandardSnapshot standard = loadStandardSnapshot(request.getMoveType());
+        ScoreCalculator.ScoreResult score = scoreCalculator.calculate(analyzedData, standard.scoreStandard());
+
         analyzedData.setResultId(null);
         analyzedData.setSession(session);
         analyzedData.setVideoUrl(
@@ -78,53 +85,57 @@ public class AnalysisService {
                         : request.getVideoUrl()
         );
         analyzedData.setMoveType(request.getMoveType());
-        analyzedData.setTotalScore(calculateTotalScore(analyzedData, request.getMoveType()));
+        analyzedData.setTotalScore(score.totalScore());
+        analyzedData.setAnalysisStatus(score.status());
+        analyzedData.setScoreBreakdownJson(toJson(score.breakdown()));
+        analyzedData.setStandardVersion(standard.version());
+        analyzedData.setStandardSourceName(standard.sourceName());
+        analyzedData.setStandardVerified(standard.verified());
+        analyzedData.setStandardSnapshotJson(toJson(standard.snapshot()));
+
         return resultRepository.save(analyzedData);
     }
 
-    private int calculateTotalScore(AnalysisResult result, String moveType) {
-        ScoreStandard standard = loadScoreStandard(moveType);
+    private StandardSnapshot loadStandardSnapshot(String moveType) {
+        ScoreCalculator.ScoreStandard defaults = new ScoreCalculator.ScoreStandard(90.0, 280.0);
+        TechnicalStandard entity = moveType == null || moveType.isBlank()
+                ? null
+                : standardRepository.findByMoveType(moveType).orElse(null);
 
-        double knee = valueOr(result.getKneeMinAngleDeg(), standard.idealKneeMinDeg());
-        double kneeDelta = Math.abs(knee - standard.idealKneeMinDeg());
-        double kneeScore = clamp(100.0 - kneeDelta * 1.5, 0.0, 100.0);
-
-        double rotation = valueOr(result.getRotationAngularVelocity(), 0.0);
-        double rotationScore = clamp(rotation / Math.max(1.0, standard.minRotationVelocityDegSec()) * 100.0, 0.0, 100.0);
-
-        double timingScore = clamp(valueOr(result.getTimingSyncScore(), 0), 0.0, 100.0);
-        double landingScore = clamp(valueOr(result.getLandingStabilityScore(), 0), 0.0, 100.0);
-        double confidenceScore = clamp(valueOr(result.getAnalysisConfidence(), 0), 0.0, 100.0);
-
-        double total = kneeScore * 0.25
-                + rotationScore * 0.30
-                + timingScore * 0.20
-                + landingScore * 0.15
-                + confidenceScore * 0.10;
-
-        int rounded = (int) Math.round(total);
-        if (confidenceScore < 60.0) {
-            rounded = Math.min(rounded, 65);
+        if (entity == null) {
+            Map<String, Object> snapshot = new LinkedHashMap<>();
+            snapshot.put("moveType", moveType);
+            snapshot.put("version", "fallback-0.1");
+            snapshot.put("sourceName", "AITM fallback project baseline");
+            snapshot.put("verified", false);
+            snapshot.put("standardData", "{\"idealKneeMinDeg\":90,\"minRotationVelocityDegSec\":280}");
+            return new StandardSnapshot(defaults, "fallback-0.1", "AITM fallback project baseline", false, snapshot);
         }
-        return (int) clamp(rounded, 0, 100);
+
+        ScoreCalculator.ScoreStandard scoreStandard = parseScoreStandard(entity.getStandardData(), defaults);
+        String version = blankTo(entity.getStandardVersion(), "0.1");
+        String sourceName = blankTo(entity.getSourceName(), "출처 미지정");
+        boolean verified = Boolean.TRUE.equals(entity.getVerified());
+
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("moveType", entity.getMoveType());
+        snapshot.put("skillName", entity.getSkillName());
+        snapshot.put("version", version);
+        snapshot.put("sourceName", sourceName);
+        snapshot.put("sourceUrl", entity.getSourceUrl());
+        snapshot.put("verified", verified);
+        snapshot.put("standardData", entity.getStandardData());
+
+        return new StandardSnapshot(scoreStandard, version, sourceName, verified, snapshot);
     }
 
-    private ScoreStandard loadScoreStandard(String moveType) {
-        ScoreStandard defaults = new ScoreStandard(90.0, 280.0);
-        if (moveType == null || moveType.isBlank()) {
+    private ScoreCalculator.ScoreStandard parseScoreStandard(String raw, ScoreCalculator.ScoreStandard defaults) {
+        if (raw == null || raw.isBlank()) {
             return defaults;
         }
-        return standardRepository.findByMoveType(moveType)
-                .map(TechnicalStandard::getStandardData)
-                .filter(raw -> raw != null && !raw.isBlank())
-                .map(raw -> parseScoreStandard(raw, defaults))
-                .orElse(defaults);
-    }
-
-    private ScoreStandard parseScoreStandard(String raw, ScoreStandard defaults) {
         try {
             JsonNode node = objectMapper.readTree(raw);
-            return new ScoreStandard(
+            return new ScoreCalculator.ScoreStandard(
                     jsonDouble(node, "idealKneeMinDeg", defaults.idealKneeMinDeg()),
                     jsonDouble(node, "minRotationVelocityDegSec", defaults.minRotationVelocityDegSec())
             );
@@ -136,6 +147,18 @@ public class AnalysisService {
     private double jsonDouble(JsonNode node, String key, double fallback) {
         JsonNode value = node.get(key);
         return value != null && value.isNumber() ? value.asDouble() : fallback;
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception ex) {
+            return "{}";
+        }
+    }
+
+    private String blankTo(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
     }
 
     private AnalysisSession createDefaultSession(AnalysisRequest request) {
@@ -198,24 +221,20 @@ public class AnalysisService {
 
     @Transactional
     public void deleteAnalysisResult(Long resultId) {
-        if (!resultRepository.existsById(resultId)) {
-            throw new IllegalArgumentException("분석 기록을 찾을 수 없습니다: " + resultId);
-        }
-        resultRepository.deleteById(resultId);
+        AnalysisResult result = resultRepository.findById(resultId)
+                .orElseThrow(() -> new IllegalArgumentException("분석 기록을 찾을 수 없습니다: " + resultId));
+        String videoUrl = result.getVideoUrl();
+        resultRepository.delete(result);
+        resultRepository.flush();
+        videoStorageService.deletePlaybackUrl(videoUrl);
     }
 
-    private double valueOr(Double value, double fallback) {
-        return value == null ? fallback : value;
-    }
-
-    private double valueOr(Integer value, int fallback) {
-        return value == null ? fallback : value.doubleValue();
-    }
-
-    private double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
-    private record ScoreStandard(double idealKneeMinDeg, double minRotationVelocityDegSec) {
+    private record StandardSnapshot(
+            ScoreCalculator.ScoreStandard scoreStandard,
+            String version,
+            String sourceName,
+            boolean verified,
+            Map<String, Object> snapshot
+    ) {
     }
 }

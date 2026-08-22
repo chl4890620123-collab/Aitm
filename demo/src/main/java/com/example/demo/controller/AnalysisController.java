@@ -45,20 +45,23 @@ public class AnalysisController {
             @RequestParam(required = false) Double cameraHeight
     ) {
         VideoStorageService.StoredVideo stored = videoStorageService.store(file);
-
-        AnalysisRequest request = new AnalysisRequest();
-        request.setUserId(userId);
-        request.setMoveType(moveType);
-        request.setMode(mode);
-        request.setSourceType(sourceType);
-        request.setCameraDistance(cameraDistance);
-        request.setCameraHeight(cameraHeight);
-        request.setFileSize(stored.size());
-        request.setFileExtension(stored.extension());
-        request.setVideoUrl(stored.analysisUri());
-        request.setPlaybackUrl(stored.playbackUrl());
-
-        return ResponseEntity.ok(analysisService.runAnalysisScenario(request));
+        try {
+            AnalysisRequest request = new AnalysisRequest();
+            request.setUserId(userId);
+            request.setMoveType(moveType);
+            request.setMode(mode);
+            request.setSourceType(sourceType);
+            request.setCameraDistance(cameraDistance);
+            request.setCameraHeight(cameraHeight);
+            request.setFileSize(stored.size());
+            request.setFileExtension(stored.extension());
+            request.setVideoUrl(stored.analysisUri());
+            request.setPlaybackUrl(stored.playbackUrl());
+            return ResponseEntity.ok(analysisService.runAnalysisScenario(request));
+        } catch (RuntimeException ex) {
+            videoStorageService.deletePlaybackUrl(stored.playbackUrl());
+            throw ex;
+        }
     }
 
     @GetMapping("/{id}/result")

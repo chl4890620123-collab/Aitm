@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
+    private static final String BASELINE_SOURCE = "AITM 프로젝트 초기 기준(지도자 검증 전)";
+
     private final TechnicalStandardRepository standardRepository;
     private final TaekwondoKnowledgeRepository knowledgeRepository;
 
@@ -43,15 +45,25 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void seedStandard(String moveType, String name, String description, String standardData) {
-        if (standardRepository.findByMoveType(moveType).isPresent()) {
-            return;
+        TechnicalStandard standard = standardRepository.findByMoveType(moveType).orElseGet(TechnicalStandard::new);
+        boolean isNew = standard.getId() == null;
+
+        if (isNew) {
+            standard.setMoveType(moveType);
+            standard.setSkillName(name);
+            standard.setDescription(description + " 기준값은 프로젝트 기본값이며 지도자 검증 후 수정할 수 있습니다.");
+            standard.setInjuryPrevention("통증이 발생하면 분석을 중단하고 지도자 또는 전문가의 확인을 받으세요.");
+            standard.setStandardData(standardData);
         }
-        TechnicalStandard standard = new TechnicalStandard();
-        standard.setMoveType(moveType);
-        standard.setSkillName(name);
-        standard.setDescription(description + " 기준값은 프로젝트 기본값이며 지도자 검증 후 수정할 수 있습니다.");
-        standard.setInjuryPrevention("통증이 발생하면 분석을 중단하고 지도자 또는 전문가의 확인을 받으세요.");
-        standard.setStandardData(standardData);
+        if (standard.getStandardVersion() == null || standard.getStandardVersion().isBlank()) {
+            standard.setStandardVersion("0.1");
+        }
+        if (standard.getSourceName() == null || standard.getSourceName().isBlank()) {
+            standard.setSourceName(BASELINE_SOURCE);
+        }
+        if (standard.getVerified() == null) {
+            standard.setVerified(false);
+        }
         standardRepository.save(standard);
     }
 

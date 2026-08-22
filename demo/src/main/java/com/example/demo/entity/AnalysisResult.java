@@ -21,7 +21,7 @@ public class AnalysisResult {
     private String videoUrl;
     private String moveType;
 
-    // Legacy/compatibility metrics. New analyses populate only values that can be measured from pose data.
+    // Legacy/compatibility metrics. New analyses populate only values measurable from pose data.
     private Double preLoadingFlexDeg;
     private Integer jumpBoostHeightCm;
     private Integer eyeLeadingTimeMs;
@@ -44,7 +44,12 @@ public class AnalysisResult {
     private Double poseDetectionRate;
     private Integer analysisConfidence;
 
+    // COMPLETED / REVIEW_REQUIRED / LOW_CONFIDENCE
+    private String analysisStatus;
     private Integer totalScore;
+
+    @Column(columnDefinition = "TEXT")
+    private String scoreBreakdownJson;
 
     @Column(columnDefinition = "TEXT")
     private String aiFeedback;
@@ -57,6 +62,18 @@ public class AnalysisResult {
 
     @Column(columnDefinition = "TEXT")
     private String ragSourcesJson;
+
+    // Compact sampled pose points used only for explainable video overlay.
+    @Column(columnDefinition = "TEXT")
+    private String poseFramesJson;
+
+    // Snapshot of the scoring standard used for this result.
+    private String standardVersion;
+    private String standardSourceName;
+    private Boolean standardVerified;
+
+    @Column(columnDefinition = "TEXT")
+    private String standardSnapshotJson;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
