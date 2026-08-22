@@ -1,67 +1,19 @@
-body { 
-  margin: 0; 
-  background: #f4f4f4; 
-  color: #000; 
-  font-family: sans-serif; 
-}
-
-.master-container { display: flex; min-height: 100vh; }
-
-/* 사이드바 (단순화) */
-.side-dock { 
-  width: 200px; 
-  background: #fff; 
-  border-right: 1px solid #000; 
-  display: flex; 
-  flex-direction: column; 
-  padding: 30px 0; 
-  position: sticky; 
-  top: 0; 
-  height: 100vh; 
-}
-
-.dock-logo { 
-  font-size: 20px; 
-  font-weight: bold; 
-  text-align: center; 
-  margin-bottom: 40px; 
-  border-bottom: 1px solid #eee;
-  padding-bottom: 15px;
-}
-
-.dock-nav { display: flex; flex-direction: column; width: 100%; }
-.dock-nav button { 
-  background: none; 
-  border: none; 
-  color: #666; 
-  cursor: pointer; 
-  padding: 15px 20px;
-  text-align: left;
-  font-size: 14px;
-}
-.dock-nav button.active { 
-  color: #000; 
-  background: #eee;
-  font-weight: bold;
-}
-
-/* 메인 영역 (단순화) */
-.main-viewport { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-
-.system-bar { 
-  height: 60px; 
-  border-bottom: 1px solid #000; 
-  display: flex; 
-  align-items: center; 
-  padding: 0 30px; 
-  background: #fff; 
-}
-
-.sys-path { font-size: 14px; color: #333; }
-
-.viewport-content { 
-  padding: 40px; 
-  flex: 1; 
-  width: 100%; 
-  box-sizing: border-box; 
-}
+.app-shell { min-height: 100vh; }
+.topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px clamp(20px, 5vw, 72px); background: rgba(255,255,255,.94); border-bottom: 1px solid #e6eaf2; backdrop-filter: blur(12px); }
+.topbar h1 { margin: 0; font-size: 28px; letter-spacing: -.04em; }
+.eyebrow, .section-kicker { margin: 0 0 4px; font-size: 11px; font-weight: 800; letter-spacing: .14em; color: #667085; }
+.topnav { display: flex; gap: 6px; padding: 4px; background: #f1f3f8; border-radius: 12px; }
+.topnav button { border: 0; background: transparent; padding: 9px 14px; border-radius: 9px; color: #667085; font-weight: 700; }
+.topnav button.active { background: #172033; color: #fff; }
+.page-container { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 64px; }
+.system-banner { margin: 16px auto 0; width: min(1180px, calc(100% - 32px)); padding: 12px 14px; border-radius: 10px; }
+.system-banner.error { background: #fff0f0; color: #9f2d2d; border: 1px solid #ffd1d1; }
+.panel { background: #fff; border: 1px solid #e5e9f1; border-radius: 18px; box-shadow: 0 8px 30px rgba(31, 41, 55, .04); }
+.simple-page-header { margin-bottom: 22px; }
+.simple-page-header h2 { margin: 4px 0 8px; font-size: clamp(28px, 4vw, 40px); }
+.simple-page-header p { margin: 0; color: #667085; }
+.primary { border: 0; background: #172033; color: #fff; padding: 11px 16px; border-radius: 10px; font-weight: 800; }
+.text-danger { color: #b42318 !important; }
+.helper-text { color: #667085; font-size: 13px; line-height: 1.55; }
+.center-state, .empty-state { padding: 48px; text-align: center; color: #667085; background: #fff; border: 1px solid #e5e9f1; border-radius: 18px; }
+@media (max-width: 700px) { .topbar { align-items: flex-start; flex-direction: column; gap: 12px; } .topnav { width: 100%; } .topnav button { flex: 1; } .page-container { padding-top: 20px; } }

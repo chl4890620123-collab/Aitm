@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import AnalysisEngine from './AnalysisEngine';
 import AnalysisReport from './AnalysisReport';
@@ -6,92 +6,70 @@ import HistoryPortal from './HistoryPortal';
 import KnowledgeManager from './KnowledgeManager';
 import './App.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('analysis'); 
+  const [activeTab, setActiveTab] = useState('analysis');
   const [standards, setStandards] = useState([]);
   const [analysisData, setAnalysisData] = useState(null);
+  const [bootstrapError, setBootstrapError] = useState('');
 
-  // 초기 런타임 데이터 로드
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  const fetchInitialData = async () => {
+  const fetchStandards = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/standards`);
-      if (res.data) setStandards(res.data);
-    } catch (e) { 
-      console.error("Critical: Bootstrap Data Load Failed", e); 
+      const response = await axios.get(`${API_BASE_URL}/api/standards`);
+      setStandards(response.data || []);
+      setBootstrapError('');
+    } catch (error) {
+      console.error(error);
+      setBootstrapError('백엔드와 연결되지 않았습니다. Docker 또는 Spring 서버 상태를 확인하세요.');
     }
   };
 
-  const handleAnalysisComplete = (data) => setAnalysisData(data);
-  const resetAnalysis = () => setAnalysisData(null);
+  useEffect(() => {
+    fetchStandards();
+  }, []);
 
-  // 탭 기반 동적 컨텐츠 렌더링
-  const renderContent = () => {
-    switch(activeTab) {
-      case 'analysis':
-        return analysisData ? (
-          <AnalysisReport data={analysisData} standards={standards} onReset={resetAnalysis} />
-        ) : (
-          <AnalysisEngine standards={standards} onAnalysisComplete={handleAnalysisComplete} />
-        );
-      case 'history':
-        return (
-          <HistoryPortal 
-            standards={standards} 
-            onViewDetail={(data) => {
-              setAnalysisData(data);
-              setActiveTab('analysis');
-            }} 
-          />
-        );
-      case 'management':
-        return <KnowledgeManager onDataChange={fetchInitialData} />;
-      default:
-        return null;
-    }
+  const openReport = (data) => {
+    setAnalysisData(data);
+    setActiveTab('analysis');
   };
 
   return (
-    <div className="master-container">
-      {/* Side Navigation Control */}
-      <aside className="side-dock">
-        <div className="dock-logo">AITM SYSTEM</div>
-        <nav className="dock-nav">
-          <button 
-            className={activeTab === 'analysis' ? 'active' : ''} 
-            onClick={() => {setActiveTab('analysis'); resetAnalysis();}}
-          >
-            <span>Analysis Engine</span>
-          </button>
-          <button 
-            className={activeTab === 'history' ? 'active' : ''} 
-            onClick={() => setActiveTab('history')}
-          >
-            <span>Analytics History</span>
-          </button>
-          <button 
-            className={activeTab === 'management' ? 'active' : ''} 
-            onClick={() => setActiveTab('management')}
-          >
-            <span>Knowledge Lib</span>
-          </button>
+    <div className="app-shell">
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">AI TAEKWONDO MASTER</p>
+          <h1>AITM</h1>
+        </div>
+        <nav className="topnav" aria-label="주요 메뉴">
+          <button className={activeTab === 'analysis' ? 'active' : ''} onClick={() => setActiveTab('analysis')}>분석</button>
+          <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>기록</button>
+          <button className={activeTab === 'management' ? 'active' : ''} onClick={() => setActiveTab('management')}>기준 관리</button>
         </nav>
-      </aside>
+      </header>
 
-      {/* Main Viewport */}
-      <main className="main-viewport">
-        <header className="system-bar">
-          <div className="sys-path">PATH: {activeTab.toUpperCase()}</div>
-        </header>
+      {bootstrapError && <div className="system-banner error">{bootstrapError}</div>}
 
-        <section className="viewport-content">
-          {renderContent()}
-        </section>
+      <main className="page-container">
+        {activeTab === 'analysis' && (
+          analysisData ? (
+            <AnalysisReport
+              data={analysisData}
+              standards={standards}
+              onReset={() => setAnalysisData(null)}
+            />
+          ) : (
+            <AnalysisEngine standards={standards} onAnalysisComplete={setAnalysisData} />
+          )
+        )}
+
+        {activeTab === 'history' && (
+          <HistoryPortal standards={standards} onViewDetail={openReport} />
+        )}
+
+        {activeTab === 'management' && (
+          <KnowledgeManager onDataChange={fetchStandards} />
+        )}
       </main>
     </div>
   );

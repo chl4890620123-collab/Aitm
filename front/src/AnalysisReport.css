@@ -1,26 +1,42 @@
-.detailed-report-view { padding: 20px; color: #000; }
-
-.report-main-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
-.report-type-label { font-size: 14px; color: #666; margin: 0; }
-.main-skill-name { font-size: 32px; margin: 5px 0 0; }
-
-.new-session-btn { background: #fff; border: 1px solid #000; padding: 10px 20px; cursor: pointer; font-size: 14px; }
-
-/* 점수 요약 섹션 */
-.score-summary { border: 1px solid #000; padding: 20px; margin-bottom: 30px; background: #f9f9f9; }
-.score-box h2 { font-size: 28px; margin: 0 0 10px; }
-.tier-label { font-weight: bold; font-size: 18px; }
-.tier-desc { color: #444; margin: 5px 0 0; }
-
-/* 데이터 그리드 */
-.report-data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-
-.ai-feedback-section h3, .physics-data-section h3 { font-size: 18px; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-
-.feedback-box { border: 1px solid #ccc; padding: 20px; min-height: 200px; background: #fff; line-height: 1.6; }
-
-/* 지표 테이블 스타일 */
-.metrics-table { display: flex; flex-direction: column; border-top: 1px solid #ccc; }
-.metric-item { display: flex; justify-content: space-between; padding: 12px 10px; border-bottom: 1px solid #ccc; }
-.metric-label { color: #333; }
-.metric-value { font-weight: bold; }
+.report-page { display: grid; gap: 20px; }
+.report-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 26px 30px; border-radius: 20px; background: #172033; color: #fff; }
+.report-header h2 { margin: 4px 0 8px; font-size: clamp(28px, 4vw, 42px); }
+.report-header p:last-child { margin: 0; color: #d0d5dd; }
+.score-ring { flex: 0 0 auto; display: grid; place-items: center; width: 118px; height: 118px; border: 8px solid rgba(255,255,255,.18); border-radius: 50%; }
+.score-ring strong { font-size: 36px; line-height: 1; }
+.score-ring span { font-size: 12px; color: #d0d5dd; }
+.report-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, .8fr); gap: 20px; }
+.video-review-panel, .metrics-panel, .coaching-panel, .warning-panel { padding: 22px; }
+.panel-title-row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.panel-title-row h3, .metrics-panel h3, .coaching-panel h3, .warning-panel h3 { margin: 0 0 5px; }
+.panel-title-row p { margin: 0; color: #667085; font-size: 13px; }
+.panel-title-row button { align-self: flex-start; border: 1px solid #d9deea; background: #fff; padding: 9px 12px; border-radius: 9px; font-weight: 800; }
+.review-video { display: block; width: 100%; max-height: 520px; background: #0b1020; border-radius: 14px; }
+.video-empty { min-height: 300px; display: grid; place-items: center; background: #f5f7fa; border-radius: 14px; color: #667085; }
+.speed-controls { display: flex; align-items: center; gap: 7px; margin: 12px 0; }
+.speed-controls span { margin-right: 4px; color: #667085; font-size: 13px; font-weight: 700; }
+.speed-controls button { padding: 7px 11px; }
+.speed-controls button.active { background: #172033; color: #fff; border-color: #172033; }
+.event-list { display: grid; gap: 8px; }
+.event-card { width: 100%; display: grid; grid-template-columns: 66px 1fr auto; gap: 12px; align-items: center; padding: 12px; border: 1px solid #e4e7ec; border-radius: 12px; background: #fff; text-align: left; }
+.event-card.warning { border-color: #f6c4c0; background: #fff9f8; }
+.event-card.good { border-color: #b7e4ca; background: #f7fcf9; }
+.event-time { font-weight: 900; color: #475467; }
+.event-body { display: grid; gap: 3px; }
+.event-body small { color: #667085; line-height: 1.45; }
+.event-action { color: #344054; font-size: 12px; font-weight: 900; }
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.metric-card { display: grid; gap: 6px; padding: 13px; border-radius: 12px; background: #f7f8fb; }
+.metric-card span { color: #667085; font-size: 12px; }
+.metric-card strong { font-size: 19px; }
+.metric-note { margin: 14px 0 0; color: #667085; font-size: 12px; line-height: 1.55; }
+.coaching-panel { display: grid; grid-template-columns: 1.5fr .7fr; gap: 24px; }
+.coaching-text { margin: 8px 0 0; line-height: 1.75; color: #344054; }
+.evidence-box { display: flex; flex-direction: column; gap: 7px; padding: 14px; border-radius: 12px; background: #f7f8fb; }
+.evidence-box h4 { margin: 0 0 2px; }
+.evidence-box span { font-size: 13px; color: #475467; }
+.warning-panel { border-color: #f7cf8a; background: #fffbf2; }
+.warning-panel p { margin: 6px 0 0; color: #7a4b00; }
+.empty-copy { color: #667085; }
+@media (max-width: 900px) { .report-grid, .coaching-panel { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .report-header { align-items: flex-start; } .score-ring { width: 92px; height: 92px; } .event-card { grid-template-columns: 56px 1fr; } .event-action { grid-column: 2; } .metric-grid { grid-template-columns: 1fr; } }

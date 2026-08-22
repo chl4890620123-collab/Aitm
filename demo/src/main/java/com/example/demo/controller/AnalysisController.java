@@ -1,36 +1,64 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.AnalysisRequest;
 import com.example.demo.entity.AnalysisResult;
 import com.example.demo.repository.AnalysisResultRepository;
 import com.example.demo.service.AnalysisService;
-import com.example.demo.dto.AnalysisRequest;
+import com.example.demo.service.VideoStorageService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Comparator;
 import java.util.List;
 
-/**
- * Endpoint for Taekwondo Kinematics Analysis
- */
 @RestController
 @RequestMapping("/api/analysis")
 @RequiredArgsConstructor
 public class AnalysisController {
-
     private final AnalysisService analysisService;
     private final AnalysisResultRepository resultRepository;
+    private final VideoStorageService videoStorageService;
 
     @GetMapping("/history")
     public ResponseEntity<List<AnalysisResult>> getHistory() {
-        return ResponseEntity.ok(resultRepository.findAll());
+        List<AnalysisResult> history = resultRepository.findAll();
+        history.sort(Comparator.comparing(AnalysisResult::getResultId).reversed());
+        return ResponseEntity.ok(history);
     }
 
-    // Trigger full analysis pipeline (Inference -> Scoring -> Persistence)
     @PostMapping("/execute")
     public ResponseEntity<AnalysisResult> execute(@RequestBody AnalysisRequest request) {
-        AnalysisResult result = analysisService.runAnalysisScenario(request);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(analysisService.runAnalysisScenario(request));
+    }
+
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<AnalysisResult> uploadAndAnalyze(
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(defaultValue = "guest_user") String userId,
+            @RequestParam String moveType,
+            @RequestParam(defaultValue = "PRECISION") String mode,
+            @RequestParam(defaultValue = "upload") String sourceType,
+            @RequestParam(required = false) Double cameraDistance,
+            @RequestParam(required = false) Double cameraHeight
+    ) {
+        VideoStorageService.StoredVideo stored = videoStorageService.store(file);
+
+        AnalysisRequest request = new AnalysisRequest();
+        request.setUserId(userId);
+        request.setMoveType(moveType);
+        request.setMode(mode);
+        request.setSourceType(sourceType);
+        request.setCameraDistance(cameraDistance);
+        request.setCameraHeight(cameraHeight);
+        request.setFileSize(stored.size());
+        request.setFileExtension(stored.extension());
+        request.setVideoUrl(stored.analysisUri());
+        request.setPlaybackUrl(stored.playbackUrl());
+
+        return ResponseEntity.ok(analysisService.runAnalysisScenario(request));
     }
 
     @GetMapping("/{id}/result")
@@ -40,13 +68,9 @@ public class AnalysisController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @RequestMapping(value = "/delete/{id}", method = RequestMethod.DELETE)
-    public ResponseEntity<?> deleteResult(@PathVariable("id") Long id) {
-        try {
-            analysisService.deleteAnalysisResult(id);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Delete Failed: " + e.getMessage());
-        }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteResult(@PathVariable Long id) {
+        analysisService.deleteAnalysisResult(id);
+        return ResponseEntity.noContent().build();
     }
 }

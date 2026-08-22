@@ -1,49 +1,35 @@
-.analysis-workspace { width: 100%; }
-
-/* 단계 표시 (단순화) */
-.stepper { display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; }
-.step-n { padding: 10px 20px; border: 1px solid #ccc; background: #f0f0f0; font-size: 14px; color: #666; }
-.step-n.on { border-color: #000; background: #fff; color: #000; font-weight: bold; }
-
-/* 설정 카드 (단순화) */
-.config-grid-card { border: 1px solid #000; padding: 40px; max-width: 600px; margin: 0 auto; background: #fff; }
-.c-head h2 { font-size: 24px; margin: 0 0 10px; }
-.c-head p { color: #666; margin-bottom: 30px; }
-
-/* 입력 그룹 (단순화) */
-.input-group-modern { margin-bottom: 20px; }
-.input-group-modern label { display: block; font-size: 12px; margin-bottom: 5px; color: #333; }
-.input-group-modern input, .input-group-modern select { border: 1px solid #000; padding: 12px; font-size: 16px; width: 100%; box-sizing: border-box; }
-
-.input-row-modern { display: flex; gap: 15px; }
-.flex-2 { flex: 2; }
-.flex-1 { flex: 1; }
-
-/* 토글 버튼 (단순화) */
-.toggle-pill { display: flex; border: 1px solid #000; height: 45px; }
-.toggle-pill button { flex: 1; border: none; background: #eee; cursor: pointer; font-size: 14px; }
-.toggle-pill button.on { background: #000; color: #fff; }
-
-/* 소스 선택 (단순화) */
-.source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-.source-item { border: 1px solid #ccc; padding: 20px; text-align: center; cursor: pointer; background: #f9f9f9; }
-.source-item.on { border-color: #000; background: #eee; font-weight: bold; }
-
-/* 실행 버튼 (단순화) */
-.exec-btn { width: 100%; margin-top: 30px; background: #000; color: #fff; padding: 15px; border: none; font-size: 16px; cursor: pointer; }
-
-/* 미디어 영역 (단순화) */
-.media-shell { border: 1px solid #000; max-width: 800px; margin: 0 auto; background: #fff; }
-.webcam-box { width: 100%; aspect-ratio: 16/9; background: #000; }
-
-.file-drop-zone { width: 100%; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px dashed #000; margin: 10px; box-sizing: border-box; }
-.drop-text { font-size: 16px; color: #000; }
-
-.shell-footer { padding: 20px; border-top: 1px solid #000; display: flex; justify-content: space-between; }
-.start-run-btn { background: #000; color: #fff; border: none; padding: 10px 30px; cursor: pointer; }
-.back-link { background: #eee; border: 1px solid #000; padding: 10px 20px; cursor: pointer; }
-
-/* 로딩 화면 (단순화) */
-.loading-stage { padding: 100px 0; text-align: center; }
-.loading-text h2 { margin-bottom: 10px; }
-.loading-text p { color: #666; }
+.analysis-page { display: grid; gap: 20px; }
+.intro-card { padding: 28px 30px; border-radius: 20px; background: #172033; color: #fff; }
+.intro-card h2 { margin: 4px 0 10px; max-width: 760px; font-size: clamp(26px, 4vw, 42px); line-height: 1.12; }
+.intro-card p:last-child { margin: 0; max-width: 760px; color: #d0d5dd; line-height: 1.65; }
+.analysis-layout { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.7fr); gap: 20px; }
+.settings-panel, .capture-panel { padding: 22px; }
+.settings-panel h3, .capture-panel h3 { margin: 0 0 14px; }
+.settings-panel label, .url-area label { display: grid; gap: 7px; margin-bottom: 14px; font-size: 13px; font-weight: 800; }
+.settings-panel input, .settings-panel select, .url-area input { width: 100%; border: 1px solid #d9deea; border-radius: 10px; padding: 11px 12px; background: #fff; color: #172033; }
+.compact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.source-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 5px; border-radius: 12px; background: #f2f4f7; }
+.source-tabs button { border: 0; padding: 10px; border-radius: 9px; background: transparent; color: #667085; font-weight: 800; }
+.source-tabs button.active { background: #fff; color: #172033; box-shadow: 0 2px 8px rgba(16,24,40,.08); }
+.capture-tip { margin-top: 14px; display: grid; gap: 4px; padding: 12px; border-radius: 10px; background: #f8f9fc; font-size: 13px; color: #667085; }
+.camera-frame { position: relative; overflow: hidden; min-height: 380px; border-radius: 14px; background: #0b1020; }
+.camera-frame video, .preview-video { display: block; width: 100%; max-height: 540px; object-fit: contain; background: #0b1020; border-radius: 14px; }
+.camera-frame video { min-height: 380px; object-fit: cover; }
+.record-badge { position: absolute; top: 14px; left: 14px; padding: 8px 10px; border-radius: 999px; background: #d92d20; color: #fff; font-size: 12px; font-weight: 900; }
+.capture-actions { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
+.capture-actions button, .speed-controls button { border: 1px solid #d9deea; background: #fff; padding: 10px 14px; border-radius: 10px; font-weight: 800; }
+.capture-actions .danger { border-color: #d92d20; background: #d92d20; color: #fff; }
+.capture-actions .primary { border-color: #172033; background: #172033; color: #fff; }
+.file-input-area { min-height: 380px; display: grid; place-items: center; gap: 12px; padding: 24px; border: 1px dashed #cfd5e2; border-radius: 14px; background: #fafbfc; text-align: center; }
+.file-input-area input { display: none; }
+.file-picker { display: inline-flex; padding: 12px 16px; border-radius: 10px; background: #172033; color: #fff; font-weight: 800; cursor: pointer; }
+.url-area { min-height: 260px; display: flex; flex-direction: column; justify-content: center; }
+.inline-error { margin-top: 14px; padding: 11px 12px; border-radius: 10px; background: #fff0f0; color: #b42318; font-size: 13px; }
+.analyze-button { width: 100%; margin-top: 16px; border: 0; border-radius: 12px; padding: 14px 18px; background: #172033; color: #fff; font-weight: 900; }
+.analyze-button:disabled { opacity: .55; cursor: not-allowed; }
+.loading-overlay { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 24px; background: rgba(10,15,28,.82); color: #fff; text-align: center; }
+.loading-overlay span { color: #d0d5dd; }
+.spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); border-top-color: #fff; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 850px) { .analysis-layout { grid-template-columns: 1fr; } .camera-frame, .file-input-area { min-height: 280px; } .camera-frame video { min-height: 280px; } }
+@media (max-width: 520px) { .compact-grid { grid-template-columns: 1fr; } .intro-card, .settings-panel, .capture-panel { padding: 18px; } }
