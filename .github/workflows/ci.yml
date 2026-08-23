@@ -1,11 +1,31 @@
-name: AITM CI
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
+  text-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate UTF-8, JSON and tracked artifacts
+        run: |
+          python scripts/check_text_integrity.py
+          ignored="$(git ls-files -ci --exclude-standard)"
+          if [ -n "$ignored" ]; then
+            echo "Tracked files are ignored by .gitignore:"
+            echo "$ignored"
+            exit 1
+          fi
+
   backend:
     runs-on: ubuntu-latest
     defaults:
@@ -16,10 +36,11 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '17'
           cache: maven
-      - run: chmod +x mvnw
-      - run: ./mvnw -B test
+          cache-dependency-path: demo/pom.xml
+      - name: Test backend
+        run: mvn -B test
 
   frontend:
     runs-on: ubuntu-latest
@@ -36,7 +57,7 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-  ai-static-check:
+  ai:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,4 +67,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: python -m compileall -q .
+      - name: Install AI dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Import and compile AI service
+        run: |
+          python -m compileall -q .
+          python -c "import cv2, fastapi, mediapipe, numpy, openai, pydantic, requests; import main"
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose
+        env:
+          AITM_DB_ROOT_PASSWORD: ci-root-password
+          AITM_DB_PASSWORD: ci-app-password
+          RESTOK_AI_SECURE_TOKEN: ci-secure-token
+        run: docker compose config >/dev/null
+      - name: Build all service images
+        env:
+          AITM_DB_ROOT_PASSWORD: ci-root-password
+          AITM_DB_PASSWORD: ci-app-password
+          RESTOK_AI_SECURE_TOKEN: ci-secure-token
+        run: docker compose build

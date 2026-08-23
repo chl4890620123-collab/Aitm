@@ -1,88 +1,63 @@
 services:
   mariadb:
     image: mariadb:10.11
-    container_name: aitm-db
     restart: unless-stopped
-    ports:
-      - "3308:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     environment:
       MARIADB_DATABASE: aitm_db
       MARIADB_USER: aitm
-      MARIADB_PASSWORD: ${AITM_DB_PASSWORD:?Set AITM_DB_PASSWORD in .env}
-      MARIADB_ROOT_PASSWORD: ${AITM_DB_ROOT_PASSWORD:?Set AITM_DB_ROOT_PASSWORD in .env}
+      MARIADB_PASSWORD: ${AITM_DB_PASSWORD:?AITM_DB_PASSWORD is required}
+      MARIADB_ROOT_PASSWORD: ${AITM_DB_ROOT_PASSWORD:?AITM_DB_ROOT_PASSWORD is required}
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - aitm_mariadb_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 10
 
-  core-backend:
-    build: ./demo
-    container_name: aitm-backend
+  ai:
+    build:
+      context: ./demo/ai
     restart: unless-stopped
-    ports:
-      - "8080:8080"
+    environment:
+      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN:?RESTOK_AI_SECURE_TOKEN is required}
+      BACKEND_URL: http://backend:8080
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AITM_ALLOWED_VIDEO_HOSTS: ${AITM_ALLOWED_VIDEO_HOSTS:-storage.googleapis.com}
+    volumes:
+      - aitm_video_data:/app/data/videos:ro
+
+  backend:
+    build:
+      context: ./demo
+    restart: unless-stopped
     depends_on:
       mariadb:
         condition: service_healthy
-      ai-service:
-        condition: service_healthy
+      ai:
+        condition: service_started
     environment:
-      RESTOK_DB_URL: jdbc:mariadb://mariadb:3306/aitm_db
-      RESTOK_DB_USER: aitm
-      RESTOK_DB_PASSWORD: ${AITM_DB_PASSWORD:?Set AITM_DB_PASSWORD in .env}
-      RESTOK_AI_ENGINE_URL: http://ai-service:8000/analyze-full
-      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN:?Set RESTOK_AI_SECURE_TOKEN in .env}
-      AITM_VIDEO_DIR: /data/videos
-      AITM_ALLOWED_VIDEO_HOSTS: ${AITM_ALLOWED_VIDEO_HOSTS:-storage.googleapis.com}
+      DB_URL: jdbc:mariadb://mariadb:3306/aitm_db?useUnicode=true&characterEncoding=UTF-8
+      DB_USERNAME: aitm
+      DB_PASSWORD: ${AITM_DB_PASSWORD:?AITM_DB_PASSWORD is required}
+      AI_SERVICE_URL: http://ai:8000
+      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN:?RESTOK_AI_SECURE_TOKEN is required}
+      AITM_VIDEO_DIR: /app/data/videos
     volumes:
-      - video_data:/data/videos
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
+      - aitm_video_data:/app/data/videos
 
-  ai-service:
-    build: ./demo/ai
-    container_name: aitm-ai
+  frontend:
+    build:
+      context: ./front
     restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      RESTOK_AI_SECURE_TOKEN: ${RESTOK_AI_SECURE_TOKEN:?Set RESTOK_AI_SECURE_TOKEN in .env}
-      BACKEND_URL: http://core-backend:8080
-      POSE_MODEL_PATH: /app/models/pose_landmarker_full.task
-      AITM_MAX_ANALYSIS_SECONDS: 30
-      AITM_ANALYSIS_FPS: 15
-    volumes:
-      - video_data:/data/videos:ro
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3).read()"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  front-end:
-    build: ./front
-    container_name: aitm-frontend
-    restart: unless-stopped
-    ports:
-      - "5173:80"
     depends_on:
-      core-backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://localhost/ >/dev/null 2>&1 || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 8
+      - backend
+    ports:
+      - "${AITM_BIND_HOST:-127.0.0.1}:${AITM_FRONTEND_PORT:-15173}:80"
 
 volumes:
-  mariadb_data:
-  video_data:
+  aitm_mariadb_data:
+  aitm_video_data:
