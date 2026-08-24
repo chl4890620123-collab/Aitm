@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Validate UTF-8, JSON and tracked artifacts
+      - name: Validate UTF-8, JSON and runtime wiring
         run: |
           python scripts/check_text_integrity.py
           ignored="$(git ls-files -ci --exclude-standard)"
@@ -30,6 +30,16 @@ jobs:
             echo 'front/nginx.conf still references the removed core-backend hostname.'
             exit 1
           fi
+          grep -q 'RESTOK_DB_URL:' docker-compose.yml
+          grep -q 'RESTOK_DB_USER:' docker-compose.yml
+          grep -q 'RESTOK_DB_PASSWORD:' docker-compose.yml
+          grep -q 'RESTOK_AI_ENGINE_URL: http://ai:8000/analyze-full' docker-compose.yml
+          grep -q 'APP_DATABASE_CHARSET_MIGRATION_ENABLED: ${DB_CHARSET_MIGRATION_ENABLED:-false}' docker-compose.yml
+          if grep -Eq '^\s+(DB_URL|DB_USERNAME|DB_PASSWORD|AI_SERVICE_URL):' docker-compose.yml; then
+            echo 'docker-compose.yml contains obsolete backend environment variable names.'
+            exit 1
+          fi
+          grep -q '@Value("${app.database.charset-migration.enabled:false}")' demo/src/main/java/com/example/demo/config/DatabaseCharsetMigration.java
 
   backend:
     runs-on: ubuntu-latest
