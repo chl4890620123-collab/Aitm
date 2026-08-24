@@ -25,6 +25,11 @@ jobs:
             echo "$ignored"
             exit 1
           fi
+          grep -q 'proxy_pass http://backend:8080;' front/nginx.conf
+          if grep -q 'core-backend' front/nginx.conf; then
+            echo 'front/nginx.conf still references the removed core-backend hostname.'
+            exit 1
+          fi
 
   backend:
     runs-on: ubuntu-latest
