@@ -12,6 +12,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +30,7 @@ public class DatabaseCharsetMigration implements CommandLineRunner {
 
     public DatabaseCharsetMigration(
             DataSource dataSource,
-            @Value("${app.database.charset-migration.enabled:true}") boolean enabled,
+            @Value("${app.database.charset-migration.enabled:false}") boolean enabled,
             @Value("${app.database.charset-migration.lock-wait-seconds:10}") int lockWaitSeconds
     ) {
         this.dataSource = dataSource;
@@ -38,7 +39,7 @@ public class DatabaseCharsetMigration implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         if (!enabled) {
             log.info("Database charset migration is disabled");
             return;
@@ -62,7 +63,9 @@ public class DatabaseCharsetMigration implements CommandLineRunner {
 
             if (!TARGET_COLLATION.equalsIgnoreCase(databaseCollation)) {
                 try (Statement statement = connection.createStatement()) {
-                    statement.execute("ALTER DATABASE `" + database + "` CHARACTER SET utf8mb4 COLLATE " + TARGET_COLLATION);
+                    statement.execute(
+                            "ALTER DATABASE `" + database + "` CHARACTER SET utf8mb4 COLLATE " + TARGET_COLLATION
+                    );
                 }
                 log.info("Updated database {} default collation to {}", database, TARGET_COLLATION);
             }
@@ -73,15 +76,17 @@ public class DatabaseCharsetMigration implements CommandLineRunner {
 
             migrateTablesOnSameConnection(connection, tables);
             log.info("Converted {} table(s) to utf8mb4", tables.size());
+        } catch (SQLException ex) {
+            throw new IllegalStateException("MariaDB charset migration failed", ex);
         }
     }
 
-    private boolean isMariaDb(Connection connection) throws Exception {
+    private boolean isMariaDb(Connection connection) throws SQLException {
         String product = connection.getMetaData().getDatabaseProductName();
         return product != null && product.toLowerCase().contains("mariadb");
     }
 
-    private String currentDatabase(Connection connection) throws Exception {
+    private String currentDatabase(Connection connection) throws SQLException {
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery("SELECT DATABASE()")) {
             if (!resultSet.next() || resultSet.getString(1) == null) {
@@ -91,7 +96,7 @@ public class DatabaseCharsetMigration implements CommandLineRunner {
         }
     }
 
-    private String currentDatabaseCollation(Connection connection, String database) throws Exception {
+    private String currentDatabaseCollation(Connection connection, String database) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?")) {
             statement.setString(1, database);
@@ -104,7 +109,7 @@ public class DatabaseCharsetMigration implements CommandLineRunner {
         }
     }
 
-    private List<String> nonUtf8mb4Tables(Connection connection, String database) throws Exception {
+    private List<String> nonUtf8mb4Tables(Connection connection, String database) throws SQLException {
         List<String> tables = new ArrayList<>();
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT TABLE_NAME FROM information_schema.TABLES " +
@@ -123,9 +128,10 @@ public class DatabaseCharsetMigration implements CommandLineRunner {
         return tables;
     }
 
-    private void migrateTablesOnSameConnection(Connection connection, List<String> tables) throws Exception {
+    private void migrateTablesOnSameConnection(Connection connection, List<String> tables) throws SQLException {
         try (Statement statement = connection.createStatement()) {
             statement.execute("SET SESSION FOREIGN_KEY_CHECKS=0");
+            SQLException migrationFailure = null;
             try {
                 for (String table : tables) {
                     log.info("Converting table {} to utf8mb4", table);
@@ -134,8 +140,19 @@ public class DatabaseCharsetMigration implements CommandLineRunner {
                                     " CONVERT TO CHARACTER SET utf8mb4 COLLATE " + TARGET_COLLATION
                     );
                 }
+            } catch (SQLException ex) {
+                migrationFailure = ex;
+                throw ex;
             } finally {
-                statement.execute("SET SESSION FOREIGN_KEY_CHECKS=1");
+                try {
+                    statement.execute("SET SESSION FOREIGN_KEY_CHECKS=1");
+                } catch (SQLException resetFailure) {
+                    if (migrationFailure != null) {
+                        migrationFailure.addSuppressed(resetFailure);
+                    } else {
+                        throw resetFailure;
+                    }
+                }
             }
         }
     }
