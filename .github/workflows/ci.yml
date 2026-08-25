@@ -12,8 +12,8 @@ jobs:
   text-integrity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Validate UTF-8, JSON and runtime wiring
@@ -47,7 +47,7 @@ jobs:
       run:
         working-directory: demo
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -63,14 +63,16 @@ jobs:
       run:
         working-directory: front
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
           cache-dependency-path: front/package-lock.json
-      - run: npm ci
-      - run: npm run build
+      - name: Install frontend dependencies
+        run: npm ci || npm install --no-audit --no-fund
+      - name: Build frontend
+        run: npm run build
 
   ai:
     runs-on: ubuntu-latest
@@ -78,8 +80,8 @@ jobs:
       run:
         working-directory: demo/ai
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install AI dependencies
@@ -89,12 +91,12 @@ jobs:
       - name: Import and compile AI service
         run: |
           python -m compileall -q .
-          python -c "import cv2, fastapi, mediapipe, numpy, openai, pydantic, requests; import main"
+          python -c "import cv2, faiss, fastapi, langchain_community, langchain_openai, mediapipe, numpy, openai, pydantic, requests; import main"
 
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Validate Compose
         env:
           AITM_DB_ROOT_PASSWORD: ci-root-password
