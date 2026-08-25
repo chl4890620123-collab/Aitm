@@ -30,13 +30,14 @@ jobs:
             echo 'front/nginx.conf still references the removed core-backend hostname.'
             exit 1
           fi
-          grep -q 'RESTOK_DB_URL:' docker-compose.yml
-          grep -q 'RESTOK_DB_USER:' docker-compose.yml
-          grep -q 'RESTOK_DB_PASSWORD:' docker-compose.yml
-          grep -q 'RESTOK_AI_ENGINE_URL: http://ai:8000/analyze-full' docker-compose.yml
+          grep -q 'AITM_DB_URL:' docker-compose.yml
+          grep -q 'AITM_DB_USER:' docker-compose.yml
+          grep -q 'AITM_DB_PASSWORD:' docker-compose.yml
+          grep -q 'AITM_AI_ENGINE_URL: http://ai:8000/analyze-full' docker-compose.yml
+          grep -q 'AITM_AI_SECURE_TOKEN:' docker-compose.yml
           grep -q 'APP_DATABASE_CHARSET_MIGRATION_ENABLED: ${DB_CHARSET_MIGRATION_ENABLED:-false}' docker-compose.yml
-          if grep -Eq '^\s+(DB_URL|DB_USERNAME|DB_PASSWORD|AI_SERVICE_URL):' docker-compose.yml; then
-            echo 'docker-compose.yml contains obsolete backend environment variable names.'
+          if grep -RInE 'RESTOK_(DB|AI)|restok\.ai|X-RESTOK-AI-TOKEN' .env.example docker-compose.yml demo/src demo/ai; then
+            echo 'Aitm runtime wiring still contains Restok-specific names.'
             exit 1
           fi
           grep -q '@Value("${app.database.charset-migration.enabled:false}")' demo/src/main/java/com/example/demo/config/DatabaseCharsetMigration.java
@@ -101,11 +102,11 @@ jobs:
         env:
           AITM_DB_ROOT_PASSWORD: ci-root-password
           AITM_DB_PASSWORD: ci-app-password
-          RESTOK_AI_SECURE_TOKEN: ci-secure-token
+          AITM_AI_SECURE_TOKEN: ci-secure-token
         run: docker compose config >/dev/null
       - name: Build all service images
         env:
           AITM_DB_ROOT_PASSWORD: ci-root-password
           AITM_DB_PASSWORD: ci-app-password
-          RESTOK_AI_SECURE_TOKEN: ci-secure-token
+          AITM_AI_SECURE_TOKEN: ci-secure-token
         run: docker compose build

@@ -39,10 +39,10 @@ public class AnalysisService {
     private final ScoreCalculator scoreCalculator;
     private final VideoStorageService videoStorageService;
 
-    @Value("${restok.ai.secure-token}")
+    @Value("${aitm.ai.secure-token}")
     private String secureToken;
 
-    @Value("${restok.ai.engine-url}")
+    @Value("${aitm.ai.engine-url}")
     private String pythonEngineUrl;
 
     @Value("${aitm.storage.video-dir:./data/videos}")
@@ -62,7 +62,7 @@ public class AnalysisService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-RESTOK-AI-TOKEN", secureToken);
+        headers.set("X-AITM-AI-TOKEN", secureToken);
 
         AnalysisResult analyzedData = restTemplate.postForObject(
                 pythonEngineUrl,

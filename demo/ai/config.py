@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-SECURE_TOKEN = os.getenv("RESTOK_AI_SECURE_TOKEN")
+SECURE_TOKEN = os.getenv("AITM_AI_SECURE_TOKEN")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 POSE_MODEL_PATH = Path(os.getenv("POSE_MODEL_PATH", "/app/models/pose_landmarker_full.task"))

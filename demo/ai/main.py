@@ -30,11 +30,14 @@ def health() -> Dict[str, Any]:
 
 
 @app.post("/analyze-full")
-def analyze_full(request: AnalysisRequest, x_restok_ai_token: Optional[str] = Header(default=None)) -> Dict[str, Any]:
+def analyze_full(
+    request: AnalysisRequest,
+    x_aitm_ai_token: Optional[str] = Header(default=None, alias="X-AITM-AI-TOKEN"),
+) -> Dict[str, Any]:
     if not SECURE_TOKEN:
-        raise HTTPException(status_code=503, detail="RESTOK_AI_SECURE_TOKEN이 설정되지 않았습니다.")
-    if x_restok_ai_token != SECURE_TOKEN:
-        raise HTTPException(status_code=403, detail="Invalid AI service token")
+        raise HTTPException(status_code=503, detail="AITM_AI_SECURE_TOKEN이 설정되지 않았습니다.")
+    if x_aitm_ai_token != SECURE_TOKEN:
+        raise HTTPException(status_code=403, detail="Invalid AITM AI service token")
 
     move_type = request.moveType or "dolgechigi"
     standard = load_project_standard(move_type)
