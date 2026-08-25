@@ -2,6 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# The production mini PC can have a slow route to PyPI for large MediaPipe/OpenCV
+# wheels. Keep dependency versions unchanged, but allow slow reads and transient
+# download failures to recover instead of aborting the image build.
+ENV PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=10 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
