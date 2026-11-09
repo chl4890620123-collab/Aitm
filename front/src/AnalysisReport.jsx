@@ -246,7 +246,7 @@ function AnalysisReport({ data, standards, onReset }) {
           {referenceEmbed && (
             <section className="reference-compare" aria-label="사범 기준 영상">
               <div className="reference-header">
-                <div><strong>유튜브 원본 기술 영상</strong><p>내 촬영 영상과 나란히 확인하는 시각적 참고 자료입니다. 관절값은 내 영상에서 측정합니다.</p></div>
+                <div><strong>유튜브 참고 기술 영상</strong><p>내 촬영 영상과 나란히 확인하는 시각적 참고 자료입니다. 유튜브 시청 링크는 분석 대상이 아닙니다. 기준 파일을 업로드했을 때만 양쪽을 별도로 측정합니다.</p></div>
                 <button type="button" onClick={() => setShowReference(value => !value)}>
                   {showReference ? '기준 영상 접기' : '기준 영상 보기'}
                 </button>
