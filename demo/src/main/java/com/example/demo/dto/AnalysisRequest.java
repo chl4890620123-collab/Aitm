@@ -15,4 +15,7 @@ public class AnalysisRequest {
     private Double cameraHeight;
     private Long fileSize;
     private String fileExtension;
+    // Server-owned snapshot; never trust client-supplied standards.
+    private String standardData;
+    private String standardVersion;
 }
