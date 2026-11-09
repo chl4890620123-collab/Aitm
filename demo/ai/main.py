@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from coaching import generate_feedback
 from config import OPENAI_API_KEY, POSE_MODEL_PATH, SECURE_TOKEN
-from pose_engine import analyze_pose, load_project_standard, resolve_video_source
+from pose_engine import analyze_pose, standard_from_snapshot, resolve_video_source
 from schemas import AnalysisRequest
 
 app = FastAPI(title="AITM Pose Analysis Engine", version="2.0")
@@ -40,7 +40,7 @@ def analyze_full(
         raise HTTPException(status_code=403, detail="Invalid AITM AI service token")
 
     move_type = request.moveType or "dolgechigi"
-    standard = load_project_standard(move_type)
+    standard = standard_from_snapshot(request.standardData)
     video_path, temporary_path = resolve_video_source(request.videoUrl)
     try:
         metrics = analyze_pose(video_path, standard)
