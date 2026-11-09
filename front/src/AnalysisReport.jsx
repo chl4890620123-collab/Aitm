@@ -46,6 +46,8 @@ function AnalysisReport({ data, standards, onReset }) {
   const [speed, setSpeed] = useState(0.5);
   const [currentTime, setCurrentTime] = useState(0);
   const [overlayEnabled, setOverlayEnabled] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [repeatSegment, setRepeatSegment] = useState(true);
 
   const events = useMemo(() => parseJson(data.analysisEventsJson, []), [data.analysisEventsJson]);
   const warnings = useMemo(() => parseJson(data.qualityWarningsJson, []), [data.qualityWarningsJson]);
@@ -85,13 +87,30 @@ function AnalysisReport({ data, standards, onReset }) {
     if (videoRef.current) videoRef.current.playbackRate = nextSpeed;
   };
 
-  const seekToEvent = (event) => {
+  // The clip is derived from the model's real measured event timestamp.
+  // Keep original video untouched; only change HTMLVideoElement playback rate.
+  const playEvidence = (event) => {
     const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = Math.max(0, Number(event.timeSec) - 0.4);
-    video.playbackRate = 0.5;
-    setSpeed(0.5);
+    if (!video || !Number.isFinite(Number(event.timeSec))) return;
+    setSelectedEvent(event);
+    const start = Math.max(0, Number(event.timeSec) - 1);
+    video.currentTime = start;
+    video.playbackRate = speed;
     video.play().catch(() => {});
+  };
+
+  const updateVideoTime = (video) => {
+    setCurrentTime(video.currentTime);
+    if (!selectedEvent) return;
+    const stopAt = Math.min(video.duration || Infinity, Number(selectedEvent.timeSec) + 1.2);
+    if (video.currentTime >= stopAt) {
+      if (repeatSegment) {
+        video.currentTime = Math.max(0, Number(selectedEvent.timeSec) - 1);
+        if (video.paused) video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    }
   };
 
   const syncCanvasSize = () => {
@@ -163,7 +182,7 @@ function AnalysisReport({ data, standards, onReset }) {
                 src={mediaUrl(data.videoUrl)}
                 controls
                 playsInline
-                onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+                onTimeUpdate={(event) => updateVideoTime(event.currentTarget)}
                 onLoadedMetadata={() => { changeSpeed(speed); syncCanvasSize(); }}
                 onResize={syncCanvasSize}
               />
@@ -171,6 +190,15 @@ function AnalysisReport({ data, standards, onReset }) {
             {data.videoUrl && <canvas ref={canvasRef} className={`pose-overlay ${overlayEnabled ? '' : 'hidden'}`} />}
           </div>
 
+          {selectedEvent && (
+            <div className="evidence-active" role="status">
+              <strong>{selectedEvent.label} · 구간 증거</strong>
+              <span>측정 시점 {Number(selectedEvent.timeSec).toFixed(2)}초 · 전후 약 1초 재생</span>
+              <p>{selectedEvent.detail}</p>
+              <button type="button" onClick={() => playEvidence(selectedEvent)}>이 구간 다시 보기</button>
+              <button type="button" onClick={() => { setSelectedEvent(null); videoRef.current?.pause(); }}>전체 영상으로 돌아가기</button>
+            </div>
+          )}
           <div className="review-controls">
             <div className="speed-controls">
               <span>재생 속도</span>
@@ -178,16 +206,19 @@ function AnalysisReport({ data, standards, onReset }) {
                 <button key={value} className={speed === value ? 'active' : ''} onClick={() => changeSpeed(value)}>{value}×</button>
               ))}
             </div>
-            <button className={overlayEnabled ? 'active' : ''} onClick={() => setOverlayEnabled((value) => !value)}>Pose 오버레이</button>
+            <button className={overlayEnabled ? 'active' : ''} onClick={() => setOverlayEnabled((value) => !value)}>관절 위치 표시</button>
+            <label className="evidence-loop"><input type="checkbox" checked={repeatSegment} onChange={(e) => setRepeatSegment(e.target.checked)} /> 구간 반복</label>
           </div>
 
           <div className="event-list">
-            {events.length === 0 && <p className="empty-copy">표시할 분석 이벤트가 없습니다.</p>}
-            {events.map((event, index) => (
-              <button key={`${event.label}-${index}`} className={`event-card ${event.severity || ''}`} onClick={() => seekToEvent(event)}>
-                <span className="event-time">{Number(event.timeSec || 0).toFixed(2)}s</span>
-                <span className="event-body"><strong>{event.label}</strong><small>{event.detail}</small></span>
-                <span className="event-action">느리게 보기</span>
+            <h4>증거 구간별로 느리게 보기</h4>
+            <p className="metric-note">실제 관절 측정 시점만 표시합니다. 구간을 선택하면 앞뒤 약 1초를 기본 0.5배속으로 반복합니다.</p>
+            {events.length === 0 && <p className="empty-copy">표시할 분석 이벤트가 없습니다. 측정 근거 없이 단정하지 않습니다.</p>}
+            {[...events].sort((a, b) => (a.severity === 'warning' ? 0 : 1) - (b.severity === 'warning' ? 0 : 1)).map((event, index) => (
+              <button key={`${event.label}-${index}`} className={`event-card ${event.severity || ''} ${selectedEvent === event ? 'selected' : ''}`} onClick={() => playEvidence(event)}>
+                <span className="event-time">{Number(event.timeSec).toFixed(2)}s</span>
+                <span className="event-body"><strong>{event.severity === 'warning' ? '교정 필요 · ' : '측정 근거 · '}{event.label}</strong><small>{event.detail}</small></span>
+                <span className="event-action">0.5× 구간 재생</span>
               </button>
             ))}
           </div>
