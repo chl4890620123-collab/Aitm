@@ -233,6 +233,9 @@ function AnalysisReport({ data, standards, onReset }) {
       </section>
       <p className="metric-note">AITM 점수는 프로젝트 측정 기준에 따른 참고 점수입니다. 관절 검출 신뢰도는 자세 채점 정확도와 다릅니다.</p>
 
+      <AnalysisMetricsGraph frames={poseFrames} snapshot={data.standardSnapshotJson}
+        selectedTime={currentTime} onSeek={jumpFromGraph} />
+
       <div className="report-grid">
         <section className="panel video-review-panel">
           <div className="panel-title-row">
@@ -243,6 +246,7 @@ function AnalysisReport({ data, standards, onReset }) {
             <button onClick={onReset}>새 분석</button>
           </div>
 
+          <div className={`comparison-video-layout ${referenceEmbed && showReference ? 'two-column' : ''}`}>
           {referenceEmbed && (
             <section className="reference-compare" aria-label="사범 기준 영상">
               <div className="reference-header">
@@ -260,6 +264,7 @@ function AnalysisReport({ data, standards, onReset }) {
               )}
             </section>
           )}
+          <div className="own-video-column">
           <h4 className="own-video-title">내 촬영 영상 · 실제 관절 분석</h4>
           <div className="video-overlay-wrap">
             {data.videoUrl ? (
@@ -275,6 +280,8 @@ function AnalysisReport({ data, standards, onReset }) {
               />
             ) : <div className="video-empty">저장된 영상이 없습니다.</div>}
             {data.videoUrl && <canvas ref={canvasRef} className={`pose-overlay ${overlayEnabled ? '' : 'hidden'}`} />}
+          </div>
+          </div>
           </div>
 
           <div className="slide-motion-controls">
@@ -347,9 +354,6 @@ function AnalysisReport({ data, standards, onReset }) {
       {data.referencePlaybackUrl && (
         <ReferenceComparison data={data} ownEvents={events} onChooseOwnEvent={playEvidence} />
       )}
-
-      <AnalysisMetricsGraph frames={poseFrames} snapshot={data.standardSnapshotJson}
-        selectedTime={currentTime} onSeek={jumpFromGraph} />
 
       <section className="panel coaching-panel">
         <div>
