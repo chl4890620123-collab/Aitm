@@ -8,7 +8,7 @@
 .settings-panel label, .url-area label { display: grid; gap: 7px; margin-bottom: 14px; font-size: 13px; font-weight: 800; }
 .settings-panel input, .settings-panel select, .url-area input { width: 100%; border: 1px solid #d9deea; border-radius: 10px; padding: 11px 12px; background: #fff; color: #172033; }
 .compact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.source-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 5px; border-radius: 12px; background: #f2f4f7; }
+.source-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 5px; border-radius: 12px; background: #f2f4f7; }
 .source-tabs button { border: 0; padding: 10px; border-radius: 9px; background: transparent; color: #667085; font-weight: 800; }
 .source-tabs button.active { background: #fff; color: #172033; box-shadow: 0 2px 8px rgba(16,24,40,.08); }
 .capture-tip { margin-top: 14px; display: grid; gap: 4px; padding: 12px; border-radius: 10px; background: #f8f9fc; font-size: 13px; color: #667085; }
@@ -33,3 +33,8 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 850px) { .analysis-layout { grid-template-columns: 1fr; } .camera-frame, .file-input-area { min-height: 280px; } .camera-frame video { min-height: 280px; } }
 @media (max-width: 520px) { .compact-grid { grid-template-columns: 1fr; } .intro-card, .settings-panel, .capture-panel { padding: 18px; } }
+
+.advanced-video-source { margin-top: 12px; font-size: 13px; color: #667085; }
+.advanced-video-source summary { cursor: pointer; font-weight: 700; }
+.advanced-video-source button { margin-top: 8px; border: 1px solid #d9deea; padding: 8px 12px; border-radius: 8px; background: #fff; color: #344054; cursor: pointer; }
+.advanced-video-source button.active { background: #172033; color: #fff; }
