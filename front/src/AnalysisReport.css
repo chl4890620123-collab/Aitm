@@ -183,3 +183,17 @@
   .reference-comparison-content { grid-template-columns: 1fr; }
   .comparison-difference { grid-template-columns: 1fr 1fr; }
 }
+
+/* Put the evidence above the aggregate number: expert training is about movement. */
+.score-ring { width: 88px; height: 88px; border-width: 5px; }
+.score-ring strong { font-size: 25px; }
+.comparison-video-layout { display: grid; gap: 14px; align-items: start; }
+.comparison-video-layout.two-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.comparison-video-layout .reference-compare { min-width: 0; margin: 0; }
+.comparison-video-layout .reference-video-frame { width: 100%; }
+.comparison-video-layout .own-video-column { min-width: 0; }
+.comparison-video-layout .own-video-title { margin: 10px 0; }
+.comparison-video-layout .review-video { width: 100%; }
+@media (max-width: 780px) {
+  .comparison-video-layout.two-column { grid-template-columns: 1fr; }
+}
