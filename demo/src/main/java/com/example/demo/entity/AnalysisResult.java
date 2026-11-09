@@ -19,6 +19,9 @@ public class AnalysisResult {
 
     @Column(columnDefinition = "TEXT")
     private String videoUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String referenceVideoUrl;
     private String moveType;
 
     // Legacy/compatibility metrics. New analyses populate only values measurable from pose data.
