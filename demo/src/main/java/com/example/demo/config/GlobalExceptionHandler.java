@@ -26,6 +26,11 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
+    @ExceptionHandler(java.util.NoSuchElementException.class)
+    public ResponseEntity<Map<String, Object>> handleMissing(java.util.NoSuchElementException ex) {
+        return response(HttpStatus.NOT_FOUND, "분석 기록을 찾을 수 없습니다.");
+    }
+
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, Object>> handleTooLarge(MaxUploadSizeExceededException ex) {
         return response(HttpStatus.PAYLOAD_TOO_LARGE, "영상 파일이 허용 크기를 초과했습니다.");
