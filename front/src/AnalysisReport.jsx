@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AnalysisMetricsGraph from './AnalysisMetricsGraph';
+import ReferenceComparison from './ReferenceComparison';
 import { getYouTubeEmbed } from './youtube';
 import './AnalysisReport.css';
 
@@ -212,7 +213,7 @@ function AnalysisReport({ data, standards, onReset }) {
         <div>
           <p className="section-kicker">POSE ANALYSIS REPORT</p>
           <h2>{skillName}</h2>
-          <p>{statusText} · 사범 훈련 분석 · 기준 {data.standardVersion || '-'}</p>
+          <p>{statusText} · 사범 훈련 분석 · 기존 측정 기준 {data.standardVersion || '-'}</p>
         </div>
         <div className="score-ring" aria-label="참고 점수">
           <strong>{data.totalScore ?? '—'}</strong>
@@ -342,6 +343,10 @@ function AnalysisReport({ data, standards, onReset }) {
 
 
       </div>
+
+      {data.referencePlaybackUrl && (
+        <ReferenceComparison data={data} ownEvents={events} onChooseOwnEvent={playEvidence} />
+      )}
 
       <AnalysisMetricsGraph frames={poseFrames} snapshot={data.standardSnapshotJson}
         selectedTime={currentTime} onSeek={jumpFromGraph} />
