@@ -49,7 +49,9 @@ function AnalysisReport({ data, standards, onReset }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [overlayEnabled, setOverlayEnabled] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
-
+  const [scrubbing, setScrubbing] = useState(false);
+  const scrubbingRef = useRef(false);
+  const scrubAnchorRef = useRef(null);
 
   const events = useMemo(() => parseJson(data.analysisEventsJson, []), [data.analysisEventsJson]);
   const warnings = useMemo(() => parseJson(data.qualityWarningsJson, []), [data.qualityWarningsJson]);
@@ -98,35 +100,69 @@ function AnalysisReport({ data, standards, onReset }) {
     const video = videoRef.current;
     if (!video || !Number.isFinite(Number(event.timeSec))) return;
     setSelectedEvent(event);
+    scrubAnchorRef.current = null;
     video.currentTime = Math.max(0, Number(event.timeSec) - 1.6);
     video.playbackRate = 1;
     video.play().catch(() => {});
   };
 
-  const scrubTo = (time, pause = true) => {
+  const scrubTo = (time) => {
     const video = videoRef.current;
     if (!video) return;
-    if (pause) video.pause();
+    video.pause();
     const nextTime = Math.min(Number.isFinite(video.duration) ? video.duration : Number.MAX_SAFE_INTEGER,
       Math.max(0, Number(time)));
+    if (!Number.isFinite(nextTime)) return;
     video.currentTime = nextTime;
     setCurrentTime(nextTime);
+    scrubAnchorRef.current = nextTime;
     const closest = events.reduce((best, event) => (
+      Number.isFinite(Number(event.timeSec)) &&
       Math.abs(Number(event.timeSec) - nextTime) < Math.abs(Number(best?.timeSec ?? Infinity) - nextTime)
         ? event : best
     ), null);
-    setSelectedEvent(closest && Math.abs(Number(closest.timeSec) - nextTime) < 1 ? closest : null);
+    setSelectedEvent(closest && Math.abs(Number(closest.timeSec) - nextTime) < 0.8 ? closest : null);
+  };
+
+  const beginScrub = () => {
+    if (!videoRef.current) return;
+    scrubbingRef.current = true;
+    setScrubbing(true);
+    videoRef.current.pause();
+  };
+
+  const finishScrub = (force = false) => {
+    if (!scrubbingRef.current && !force) return;
+    scrubbingRef.current = false;
+    setScrubbing(false);
+    const video = videoRef.current;
+    if (!video) return;
+    // Releasing the slider should immediately start a slow, continuous
+    // playback from the chosen frame; no checkbox or mode selection needed.
+    scrubAnchorRef.current = video.currentTime;
+    video.playbackRate = 0.3;
+    setDisplayRate(0.3);
+    video.play().catch(() => {});
+  };
+
+  const jumpFromGraph = (time) => {
+    scrubTo(time);
+    finishScrub(true);
   };
 
   const updateVideoTime = (video) => {
     const time = video.currentTime;
     setCurrentTime(time);
-    const eventTime = selectedEvent ? Number(selectedEvent.timeSec) : NaN;
+    if (scrubbingRef.current) return;
+    const eventTime = selectedEvent
+      ? Number(selectedEvent.timeSec)
+      : scrubAnchorRef.current ?? NaN;
     const targetRate = slowRateAt(time, eventTime);
     const nextRate = Math.max(0.3, Math.min(1, video.playbackRate + (targetRate - video.playbackRate) * 0.38));
     if (Math.abs(nextRate - video.playbackRate) > 0.01) video.playbackRate = nextRate;
     setDisplayRate(nextRate);
     if (selectedEvent && time > eventTime + 2) setSelectedEvent(null);
+    if (scrubAnchorRef.current !== null && time > scrubAnchorRef.current + 2) scrubAnchorRef.current = null;
   };
 
   const orderedEvents = [...events]
@@ -219,13 +255,30 @@ function AnalysisReport({ data, standards, onReset }) {
 
           <div className="slide-motion-controls">
             <div className="slide-motion-heading">
-              <strong>슬라이드하듯 동작 탐색</strong>
-              <span>{currentTime.toFixed(2)} / {Number.isFinite(duration) ? duration.toFixed(2) : '0.00'}초 · {displayRate.toFixed(2)}배속</span>
+              <strong>손가락으로 밀어 동작 탐색</strong>
+              <span>{currentTime.toFixed(2)} / {Number.isFinite(duration) ? duration.toFixed(2) : '0.00'}초 · {scrubbing ? '장면 탐색 중' : displayRate.toFixed(2) + '배속'}</span>
             </div>
             <input type="range" className="motion-slider" min="0" max={duration > 0 ? duration : 1}
               step="0.033" value={Math.min(currentTime, duration > 0 ? duration : 1)}
-              aria-label="영상을 손가락으로 밀어 동작을 찾기"
+              style={{ '--played': `${duration > 0 ? currentTime / duration * 100 : 0}%` }}
+              aria-label="손가락으로 밀어서 동작 시점 찾기. 손을 떼면 해당 지점부터 슬로우 재생됩니다."
+              onPointerDown={beginScrub}
+              onPointerUp={() => finishScrub()}
+              onPointerCancel={() => finishScrub()}
+              onTouchEnd={() => finishScrub()}
+              onKeyUp={() => finishScrub(true)}
+              onBlur={() => finishScrub()}
               onChange={e => scrubTo(Number(e.target.value))} disabled={!data.videoUrl || duration <= 0} />
+            <div className="motion-timeline-markers" aria-label="측정된 동작 시점 표시">
+              {duration > 0 && orderedEvents.map((event, index) => (
+                <button type="button" key={`marker-${event.label}-${index}`}
+                  className={`motion-marker ${event.severity === 'warning' ? 'needs-review' : ''}`}
+                  style={{ left: `${Math.max(1, Math.min(99, Number(event.timeSec) / duration * 100))}%` }}
+                  title={`${event.label} ${Number(event.timeSec).toFixed(2)}초`}
+                  aria-label={`${event.label} 동작으로 이동`}
+                  onClick={() => playEvidence(event)} />
+              ))}
+            </div>
             <div className="motion-slider-actions">
               <button type="button" onClick={() => moveEvent(-1)} disabled={!orderedEvents.length}>이전 동작</button>
               <button type="button" onClick={() => {
@@ -236,7 +289,7 @@ function AnalysisReport({ data, standards, onReset }) {
               }}>재생 / 일시정지</button>
               <button type="button" onClick={() => moveEvent(1)} disabled={!orderedEvents.length}>다음 동작</button>
             </div>
-            <p className="metric-note">슬라이더를 밀면 영상 프레임이 이어서 바뀝니다. 동작 구간을 선택하면 문제 시점 근처에서 자연스럽게 약 0.3배속까지 느려졌다가 정상 속도로 돌아옵니다.</p>
+            <p className="metric-note">슬라이더를 좌우로 밀어 장면을 찾으세요. 손을 떼면 그 장면부터 약 0.3배속으로 시작해 자연스럽게 정상 속도로 이어집니다. 색 점은 실제 측정된 핵심 동작입니다.</p>
           </div>
           {selectedEvent && (
             <div className="evidence-active" role="status">
@@ -268,7 +321,7 @@ function AnalysisReport({ data, standards, onReset }) {
       </div>
 
       <AnalysisMetricsGraph frames={poseFrames} snapshot={data.standardSnapshotJson}
-        selectedTime={currentTime} onSeek={time => scrubTo(time)} />
+        selectedTime={currentTime} onSeek={jumpFromGraph} />
 
       <section className="panel coaching-panel">
         <div>
