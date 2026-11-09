@@ -329,9 +329,17 @@ def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
             timing_score,
         ))
 
+    # Reuse the same measured frames for both the overlay and the expert
+    # timeline graphs. No extra pose inference is required.
+    sample_stride = max(1, len(records) // 120)
     overlay_frames = [
-        {"timeSec": round(float(row["time"]), 2), "points": row["overlay"]}
-        for row in records[::max(1, len(records) // 120)]
+        {
+            "timeSec": round(float(row["time"]), 2),
+            "points": row["overlay"],
+            "kneeAngleDeg": round(float(row["knee"]), 1),
+            "hipRotationVelocityDegSec": round(abs(math.degrees(float(hip_velocity[index]))), 1),
+        }
+        for index, row in enumerate(records) if index % sample_stride == 0
     ]
 
     return {
