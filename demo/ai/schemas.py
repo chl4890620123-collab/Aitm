@@ -17,3 +17,6 @@ class AnalysisRequest(BaseModel):
     # A single immutable standard snapshot from Spring for BOTH pose analysis and scoring.
     standardData: Optional[str] = None
     standardVersion: Optional[str] = None
+    referenceVideoUrl: Optional[str] = None
+    # Backend-provided optional uploaded comparison file, never a YouTube watch page.
+    referenceAnalysisUrl: Optional[str] = None
