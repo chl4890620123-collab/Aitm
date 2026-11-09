@@ -22,6 +22,16 @@ public class AnalysisResult {
 
     @Column(columnDefinition = "TEXT")
     private String referenceVideoUrl;
+
+    // Separate authorized source file; never replace the learner's original result.
+    @Column(columnDefinition = "TEXT")
+    private String referencePlaybackUrl;
+    @Column(columnDefinition = "TEXT")
+    private String referenceMeasurementsJson;
+    @Column(columnDefinition = "TEXT")
+    private String referencePoseFramesJson;
+    @Column(columnDefinition = "TEXT")
+    private String referenceAnalysisEventsJson;
     private String moveType;
 
     // Legacy/compatibility metrics. New analyses populate only values measurable from pose data.
