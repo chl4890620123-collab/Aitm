@@ -27,18 +27,30 @@ DEFAULT_STANDARD = {
 }
 
 
-def load_project_standard(move_type: str) -> Dict[str, float]:
-    standard = dict(DEFAULT_STANDARD)
+def standard_from_snapshot(raw_data: str | None) -> Dict[str, float]:
+    """Use exactly the standard selected by Spring for this analysis.
+
+    Never silently fall back to a different standard: the Java scoring step
+    uses the same stored snapshot, so any mismatch makes the result misleading.
+    """
+    if not raw_data:
+        raise HTTPException(status_code=422, detail="평가 기준 스냅샷이 없습니다.")
     try:
-        response = requests.get(f"{BACKEND_URL}/api/standards/{move_type}", timeout=3)
-        if response.ok and response.json().get("standardData"):
-            raw = json.loads(response.json()["standardData"])
-            for key, fallback in standard.items():
-                if key in raw:
-                    standard[key] = float(raw[key])
-    except Exception as exc:
-        print(f"[AITM] standard lookup failed: {exc}")
-    return standard
+        payload = json.loads(raw_data)
+        if not isinstance(payload, dict):
+            raise ValueError("standard must be an object")
+        standard = dict(DEFAULT_STANDARD)
+        for key in standard:
+            if key in payload:
+                value = float(payload[key])
+                if not math.isfinite(value) or value < 0:
+                    raise ValueError(key)
+                standard[key] = value
+        if standard["idealKneeMinDeg"] <= 0 or standard["minRotationVelocityDegSec"] <= 0:
+            raise ValueError("required positive thresholds")
+        return standard
+    except (ValueError, TypeError, OverflowError) as exc:
+        raise HTTPException(status_code=422, detail="평가 기준값이 올바르지 않습니다.") from exc
 
 
 def resolve_video_source(video_url: str) -> Tuple[str, Optional[str]]:
