@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.*;
@@ -14,6 +13,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import java.nio.charset.StandardCharsets;
 
 @Configuration
@@ -37,9 +38,10 @@ public class AccountSecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain accountSecurity(HttpSecurity http) throws Exception {
+    SecurityFilterChain accountSecurity(HttpSecurity http, UserAccountRepository accounts) throws Exception {
         http
-            .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+            .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/csrf", "/api/auth/register", "/api/auth/restore", "/api/auth/login").permitAll()
@@ -84,7 +86,8 @@ public class AccountSecurityConfig {
                     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                     response.getWriter().write("{\"message\":\"접근 권한이 없습니다.\"}");
                 })
-            );
+            )
+            .addFilterAfter(new ActiveAccountFilter(accounts), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }
