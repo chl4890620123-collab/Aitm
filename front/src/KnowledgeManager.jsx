@@ -6,7 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const emptyForm = {
   moveType: '', skillName: '', description: '', idealKneeMinDeg: 90, minRotationVelocityDegSec: 280,
-  minLandingStabilityScore: 75, coachingMessage: '', standardVersion: '0.1', sourceName: '', sourceUrl: '', verified: false,
+  minLandingStabilityScore: 75, coachingMessage: '', standardVersion: '0.1', sourceName: '', sourceUrl: '', referenceVideoUrl: '', injuryPrevention: '', verified: false,
 };
 
 function KnowledgeManager({ onDataChange }) {
@@ -33,7 +33,9 @@ function KnowledgeManager({ onDataChange }) {
       await axios.post(`${API_BASE_URL}/api/standards`, {
         moveType: form.moveType.trim(), skillName: form.skillName.trim(),
         description: `${form.description} 기준값은 등록된 출처와 버전으로 관리합니다.`.trim(),
-        standardVersion: form.standardVersion.trim() || '0.1', sourceName: form.sourceName.trim(), sourceUrl: form.sourceUrl.trim(), verified: Boolean(form.verified),
+        standardVersion: form.standardVersion.trim() || '0.1', sourceName: form.sourceName.trim(), sourceUrl: form.sourceUrl.trim(),
+        referenceVideoUrl: form.referenceVideoUrl.trim(), injuryPrevention: form.injuryPrevention.trim(),
+        verified: Boolean(form.verified),
         standardData: JSON.stringify({
           idealKneeMinDeg: Number(form.idealKneeMinDeg), kneeToleranceDeg: 20,
           minRotationVelocityDegSec: Number(form.minRotationVelocityDegSec), minLandingStabilityScore: Number(form.minLandingStabilityScore),
@@ -67,12 +69,14 @@ function KnowledgeManager({ onDataChange }) {
             <label>기준 버전<input value={form.standardVersion} onChange={(e) => setForm({ ...form, standardVersion: e.target.value })} placeholder="0.1" /></label>
             <label>기준 출처<input value={form.sourceName} onChange={(e) => setForm({ ...form, sourceName: e.target.value })} placeholder="예: 지도자 A 검증 데이터" /></label>
             <label>출처 URL<input value={form.sourceUrl} onChange={(e) => setForm({ ...form, sourceUrl: e.target.value })} placeholder="https://..." /></label>
+            <label>유튜브 시범 영상<input type="url" value={form.referenceVideoUrl} onChange={(e) => setForm({ ...form, referenceVideoUrl: e.target.value })} placeholder="https://www.youtube.com/watch?v=..." /></label>
             <label className="check-label"><input type="checkbox" checked={form.verified} onChange={(e) => setForm({ ...form, verified: e.target.checked })} /> 지도자/전문가 검증 완료</label>
             <label>무릎 목표 각도<input type="number" value={form.idealKneeMinDeg} onChange={(e) => setForm({ ...form, idealKneeMinDeg: e.target.value })} /></label>
             <label>최소 회전 각속도<input type="number" value={form.minRotationVelocityDegSec} onChange={(e) => setForm({ ...form, minRotationVelocityDegSec: e.target.value })} /></label>
             <label>최소 착지 안정성<input type="number" value={form.minLandingStabilityScore} onChange={(e) => setForm({ ...form, minLandingStabilityScore: e.target.value })} /></label>
           </div>
           <label>설명<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+          <label>훈련 안전·주의 사항<textarea value={form.injuryPrevention} onChange={(e) => setForm({ ...form, injuryPrevention: e.target.value })} /></label>
           <label>코칭 지식<textarea value={form.coachingMessage} onChange={(e) => setForm({ ...form, coachingMessage: e.target.value })} /></label>
           <button className="primary" onClick={saveSkill}>기준 저장</button>{message && <p className="helper-text">{message}</p>}
         </section>
