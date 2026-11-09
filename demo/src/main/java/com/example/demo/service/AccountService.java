@@ -129,6 +129,7 @@ public class AccountService {
             var owned = results.findBySession_UserIdOrderByResultIdDesc(ownerId);
             for (var result : owned) {
                 videoStorage.deletePlaybackUrl(result.getVideoUrl());
+                videoStorage.deletePlaybackUrl(result.getReferencePlaybackUrl());
             }
             results.deleteAll(owned);
             results.flush();
