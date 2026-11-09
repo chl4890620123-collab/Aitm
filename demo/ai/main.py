@@ -67,7 +67,7 @@ def analyze_full(
             finally:
                 if reference_temp:
                     Path(reference_temp).unlink(missing_ok=True)
-        feedback, sources = generate_feedback(move_type, metrics, standard)
+        feedback, sources = generate_feedback(move_type, metrics, standard, skip_llm=(mode == "FAST"))
         return {
             "moveType": move_type,
             "aiFeedback": feedback,
