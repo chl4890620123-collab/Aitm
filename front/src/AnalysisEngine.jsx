@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import Webcam from 'react-webcam';
+import { getYouTubeVideoId } from './youtube';
 import './AnalysisEngine.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -27,6 +28,8 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
   const autoStopRef = useRef(null);
 
   const [sourceType, setSourceType] = useState('camera');
+  const [referenceUrl, setReferenceUrl] = useState('');
+  const mobileCamera = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [remoteUrl, setRemoteUrl] = useState('');
@@ -53,6 +56,10 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
 
   const setFilePreview = (file) => {
     if (!file) return;
+    if (file.size > 500 * 1024 * 1024) {
+      setError('영상 파일은 500MB 이하여야 합니다. 짧은 동작을 촬영해주세요.');
+      return;
+    }
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
@@ -69,6 +76,10 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
   };
 
   const startRecording = () => {
+    if (typeof MediaRecorder === 'undefined') {
+      setError('브라우저 녹화를 지원하지 않습니다. 영상 파일을 선택해 주세요.');
+      return;
+    }
     const stream = webcamRef.current?.video?.srcObject;
     if (!stream) {
       setError('카메라가 준비되지 않았습니다. 브라우저 카메라 권한을 확인하세요.');
@@ -126,6 +137,11 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
       return;
     }
 
+    const ref = referenceUrl.trim() || standards.find(item => item.moveType === formData.moveType)?.referenceVideoUrl || '';
+    if (ref && !getYouTubeVideoId(ref)) {
+      setError('참고 영상은 유효한 HTTPS 유튜브 링크를 입력하세요.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -136,6 +152,7 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
           videoUrl: remoteUrl.trim(),
           playbackUrl: remoteUrl.trim(),
           sourceType: 'url',
+          referenceVideoUrl: ref || null,
           fileExtension: inferExtension(remoteUrl.trim()),
         });
       } else {
@@ -144,6 +161,7 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
         body.append('moveType', formData.moveType);
         body.append('mode', formData.mode);
         body.append('sourceType', sourceType);
+        if (ref) body.append('referenceVideoUrl', ref);
         response = await axios.post(`${API_BASE_URL}/api/analysis/upload`, body);
       }
       onAnalysisComplete(response.data);
@@ -162,9 +180,9 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
     <div className="analysis-page">
       <section className="intro-card">
         <div>
-          <p className="section-kicker">3단계 자세 분석</p>
-          <h2>기술을 고르고, 촬영하고, 교정할 점을 확인하세요.</h2>
-          <p>분석 결과에서 잘한 점과 고쳐야 할 동작을 영상으로 확인할 수 있습니다.</p>
+          <p className="section-kicker">사범을 위한 기술 훈련</p>
+          <h2>참고 기술과 내 동작을 비교하며 훈련하세요.</h2>
+          <p>스스로 기술을 익히는 사범을 위해 실제 관절 측정 그래프와 슬로우 동작 증거를 제공합니다.</p>
         </div>
       </section>
 
@@ -180,7 +198,7 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
 
           {selectedSkill && <p className="helper-text">{selectedSkill.description}</p>}
 
-          <h3>2. 영상 촬영 또는 업로드</h3>
+          <h3>2. 내 동작 영상</h3>
           <div className="source-tabs">
             <button className={sourceType === 'camera' ? 'active' : ''} onClick={() => changeSource('camera')}>카메라</button>
             <button className={sourceType === 'file' ? 'active' : ''} onClick={() => changeSource('file')}>파일</button>
@@ -190,6 +208,14 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
             <summary>고급 입력: 외부 영상 URL</summary>
             <button type="button" className={sourceType === 'url' ? 'active' : ''} onClick={() => changeSource('url')}>직접 영상 URL 사용</button>
           </details>
+          <div className="reference-input">
+            <label>비교할 유튜브 원본 영상 (선택)
+              <input type="url" value={referenceUrl}
+                onChange={event => setReferenceUrl(event.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..." />
+            </label>
+            <p className="helper-text">유튜브는 사범의 참고 동작을 나란히 재생하는 용도입니다. 실제 자세 계산은 직접 촬영하거나 업로드한 영상으로 수행합니다.</p>
+          </div>
           <div className="capture-tip">
             <strong>촬영 팁</strong>
             <span>전신이 화면 안에 들어오고, 발이 잘리지 않도록 약 3m 거리에서 촬영하세요.</span>
@@ -199,24 +225,31 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
         <section className="panel capture-panel">
           {sourceType === 'camera' && (
             <>
-              {!cameraSecure && <div className="inline-error">카메라 촬영은 HTTPS 또는 localhost 환경이 필요합니다.</div>}
-              {!previewUrl && (
-                <div className="camera-frame">
-                  <Webcam
-                    ref={webcamRef}
-                    audio={false}
-                    mirrored={false}
-                    videoConstraints={{ facingMode: 'user', width: 1280, height: 720 }}
-                  />
-                  {recording && <div className="record-badge">REC {recordSeconds}s / {MAX_RECORD_SECONDS}s</div>}
+              {mobileCamera ? (
+                <div className="native-camera-capture">
+                  <p>휴대폰으로 동작을 촬영한 뒤 바로 분석할 수 있습니다.</p>
+                  <input id="native-camera-file" type="file" accept="video/*" capture="environment"
+                    onChange={event => setFilePreview(event.target.files?.[0])} />
+                  <label htmlFor="native-camera-file" className="file-picker">휴대폰 카메라 열기</label>
                 </div>
+              ) : (
+                <>
+                  {!cameraSecure && <div className="inline-error">웹캠 촬영은 HTTPS 또는 localhost에서 사용할 수 있습니다.</div>}
+                  {!previewUrl && cameraSecure && (
+                    <div className="camera-frame">
+                      <Webcam ref={webcamRef} audio={false} mirrored={false}
+                        videoConstraints={{ facingMode: 'user', width: 960, height: 540 }} />
+                      {recording && <div className="record-badge">REC {recordSeconds}s / {MAX_RECORD_SECONDS}s</div>}
+                    </div>
+                  )}
+                  <div className="capture-actions">
+                    {!recording && !previewUrl && cameraSecure && <button className="primary" onClick={startRecording}>촬영 시작</button>}
+                    {recording && <button className="danger" onClick={stopRecording}>촬영 종료</button>}
+                    {previewUrl && <button onClick={() => { setSelectedFile(null); setPreviewUrl(''); }}>다시 촬영</button>}
+                  </div>
+                </>
               )}
-              {previewUrl && <video className="preview-video" src={previewUrl} controls playsInline />}
-              <div className="capture-actions">
-                {!recording && !previewUrl && <button className="primary" onClick={startRecording}>촬영 시작</button>}
-                {recording && <button className="danger" onClick={stopRecording}>촬영 종료</button>}
-                {previewUrl && <button onClick={() => { setSelectedFile(null); setPreviewUrl(''); }}>다시 촬영</button>}
-              </div>
+              {previewUrl && <video className="preview-video" src={previewUrl} controls playsInline preload="metadata" />}
             </>
           )}
 
@@ -242,7 +275,7 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
           {error && <div className="inline-error">{error}</div>}
 
           <button className="analyze-button" onClick={runAnalysis} disabled={loading || recording}>
-            {loading ? '자세를 분석하는 중...' : '3. 자세 분석 시작'}
+            {loading ? '동작을 분석하는 중...' : '3. 동작 분석하기'}
           </button>
         </section>
       </div>
