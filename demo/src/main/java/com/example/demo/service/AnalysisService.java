@@ -54,6 +54,7 @@ public class AnalysisService {
     @Transactional
     public AnalysisResult runAnalysisScenario(AnalysisRequest request) {
         validateRequestSecurity(request);
+        validateReferenceAnalysisSource(request);
 
         if (request.getUserId() == null || !request.getUserId().matches("[0-9]+")) {
             throw new SecurityException("인증된 사용자 정보가 필요합니다.");
@@ -106,6 +107,8 @@ public class AnalysisService {
             if (reference != null && !reference.isBlank()) validateReferenceVideoUrl(reference);
         }
         analyzedData.setReferenceVideoUrl(reference);
+        // Trust only the path built by the upload controller, never the AI response.
+        analyzedData.setReferencePlaybackUrl(request.getReferencePlaybackUrl());
         analyzedData.setMoveType(request.getMoveType());
         analyzedData.setTotalScore(score.totalScore());
         analyzedData.setAnalysisStatus(score.status());
@@ -232,6 +235,33 @@ public class AnalysisService {
         }
     }
 
+    private void validateReferenceAnalysisSource(AnalysisRequest request) {
+        String source = request.getReferenceAnalysisUrl();
+        if (source == null || source.isBlank()) {
+            if (request.getReferencePlaybackUrl() != null) {
+                throw new SecurityException("비교 영상 파일이 없습니다.");
+            }
+            return;
+        }
+        if (request.getReferencePlaybackUrl() == null) {
+            throw new SecurityException("비교 영상 재생 경로가 없습니다.");
+        }
+        try {
+            URI uri = URI.create(source);
+            if (!"file".equalsIgnoreCase(uri.getScheme())) {
+                throw new SecurityException("비교 영상은 직접 업로드한 원본만 분석할 수 있습니다.");
+            }
+            Path root = Path.of(videoDirectory).toAbsolutePath().normalize();
+            Path target = Path.of(uri).toAbsolutePath().normalize();
+            if (!target.startsWith(root) || !java.nio.file.Files.isRegularFile(target)
+                    || !request.getReferencePlaybackUrl().equals("/media/" + target.getFileName())) {
+                throw new SecurityException("비교 영상의 저장 경로가 올바르지 않습니다.");
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new SecurityException("비교 영상 경로가 올바르지 않습니다.");
+        }
+    }
+
     private void validateReferenceVideoUrl(String value) {
         URI uri;
         try { uri = URI.create(value); }
@@ -261,6 +291,7 @@ public class AnalysisService {
         resultRepository.delete(result);
         resultRepository.flush();
         videoStorageService.deletePlaybackUrl(videoUrl);
+        videoStorageService.deletePlaybackUrl(result.getReferencePlaybackUrl());
     }
 
     private record StandardSnapshot(
