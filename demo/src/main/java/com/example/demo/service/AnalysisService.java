@@ -55,10 +55,24 @@ public class AnalysisService {
     public AnalysisResult runAnalysisScenario(AnalysisRequest request) {
         validateRequestSecurity(request);
 
-        AnalysisSession session = request.getSessionId() != null
-                ? sessionRepository.findById(request.getSessionId())
-                    .orElseGet(() -> createDefaultSession(request))
-                : createDefaultSession(request);
+        if (request.getUserId() == null || !request.getUserId().matches("[0-9a-f]{64}")) {
+            throw new SecurityException("익명 사용자 식별 정보가 필요합니다.");
+        }
+        AnalysisSession session;
+        if (request.getSessionId() != null) {
+            session = sessionRepository.findById(request.getSessionId())
+                    .orElseThrow(() -> new IllegalArgumentException("분석 세션을 찾을 수 없습니다."));
+            if (!request.getUserId().equals(session.getUserId())) {
+                throw new SecurityException("다른 사용자의 분석 세션에 접근할 수 없습니다.");
+            }
+        } else {
+            session = createDefaultSession(request);
+        }
+
+        // Snapshot once BEFORE calling Python; Python and Java now use the same revision.
+        StandardSnapshot standard = loadStandardSnapshot(request.getMoveType());
+        request.setStandardData((String) standard.snapshot().get("standardData"));
+        request.setStandardVersion(standard.version());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -74,7 +88,6 @@ public class AnalysisService {
             throw new IllegalStateException("AI 분석 엔진이 결과를 반환하지 않았습니다.");
         }
 
-        StandardSnapshot standard = loadStandardSnapshot(request.getMoveType());
         ScoreCalculator.ScoreResult score = scoreCalculator.calculate(analyzedData, standard.scoreStandard());
 
         analyzedData.setResultId(null);
@@ -108,7 +121,7 @@ public class AnalysisService {
             snapshot.put("version", "fallback-0.1");
             snapshot.put("sourceName", "AITM fallback project baseline");
             snapshot.put("verified", false);
-            snapshot.put("standardData", "{\"idealKneeMinDeg\":90,\"minRotationVelocityDegSec\":280}");
+            snapshot.put("standardData", "{\"idealKneeMinDeg\":90,\"minRotationVelocityDegSec\":280,\"kneeToleranceDeg\":20,\"minLandingStabilityScore\":75,\"idealKneeToRotationMs\":180,\"timingToleranceMs\":180}");
             return new StandardSnapshot(defaults, "fallback-0.1", "AITM fallback project baseline", false, snapshot);
         }
 
@@ -163,7 +176,7 @@ public class AnalysisService {
 
     private AnalysisSession createDefaultSession(AnalysisRequest request) {
         AnalysisSession session = new AnalysisSession();
-        session.setUserId(request.getUserId() != null && !request.getUserId().isBlank() ? request.getUserId() : "guest_user");
+        session.setUserId(request.getUserId());
         session.setCamDistanceM(request.getCameraDistance() != null ? request.getCameraDistance() : 3.0);
         session.setCamHeightCm(request.getCameraHeight() != null ? request.getCameraHeight() : 120.0);
         return sessionRepository.save(session);
@@ -220,9 +233,9 @@ public class AnalysisService {
     }
 
     @Transactional
-    public void deleteAnalysisResult(Long resultId) {
-        AnalysisResult result = resultRepository.findById(resultId)
-                .orElseThrow(() -> new IllegalArgumentException("분석 기록을 찾을 수 없습니다: " + resultId));
+    public void deleteAnalysisResult(Long resultId, String ownerId) {
+        AnalysisResult result = resultRepository.findByResultIdAndSession_UserId(resultId, ownerId)
+                .orElseThrow(() -> new java.util.NoSuchElementException("분석 기록을 찾을 수 없습니다."));
         String videoUrl = result.getVideoUrl();
         resultRepository.delete(result);
         resultRepository.flush();
