@@ -100,3 +100,54 @@
  .metrics-graph-panel { padding: 16px; }
  .motion-event-rail .event-card { flex-basis: 88%; }
 }
+
+/* Swipe/scrub is the primary interaction, not a toggle or checkbox. */
+.motion-slider {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(to right, #2563eb var(--played, 0%), #dbe4ef var(--played, 0%));
+  background-size: 100% 8px;
+  background-repeat: no-repeat;
+  background-position: center;
+  touch-action: none;
+}
+.motion-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  background: white;
+  border: 4px solid #2563eb;
+  box-shadow: 0 2px 9px rgba(24, 57, 107, .22);
+  border-radius: 50%;
+  cursor: grab;
+}
+.motion-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  background: white;
+  border: 4px solid #2563eb;
+  box-shadow: 0 2px 9px rgba(24, 57, 107, .22);
+  border-radius: 50%;
+  cursor: grab;
+}
+.motion-timeline-markers { position: relative; height: 22px; margin: -4px 9px 5px; }
+.motion-marker {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  border: 0;
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+  background: #16a34a;
+  box-shadow: 0 0 0 3px #eff6ff;
+  cursor: pointer;
+}
+.motion-marker.needs-review { background: #e36b30; }
+.motion-marker:focus-visible { outline: 2px solid #172033; outline-offset: 3px; }
+.motion-slider:focus-visible { outline: 2px solid #2563eb; outline-offset: 4px; }
