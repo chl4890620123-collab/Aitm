@@ -51,6 +51,8 @@ function AnalysisReport({ data, standards, onReset }) {
   const warnings = useMemo(() => parseJson(data.qualityWarningsJson, []), [data.qualityWarningsJson]);
   const sources = useMemo(() => parseJson(data.ragSourcesJson, []), [data.ragSourcesJson]);
   const poseFrames = useMemo(() => parseJson(data.poseFramesJson, []), [data.poseFramesJson]);
+  const goodEvents = events.filter(event => event.severity === 'good');
+  const focusEvents = events.filter(event => event.severity === 'warning');
   const skillName = standards.find((item) => item.moveType === data.moveType)?.skillName || data.moveType || '태권도 기술';
 
   useEffect(() => {
@@ -108,7 +110,7 @@ function AnalysisReport({ data, standards, onReset }) {
     ['상대 점프 높이', formatValue(data.jumpHeightRelative, '%', 1)],
     ['착지 안정성', formatValue(data.landingStabilityScore, '/100', 0)],
     ['타이밍', formatValue(data.timingSyncScore, '/100', 0)],
-    ['분석 신뢰도', formatValue(data.analysisConfidence, '%', 0)],
+    ['관절 검출 신뢰도', formatValue(data.analysisConfidence, '%', 0)],
   ];
 
   const statusText = data.analysisStatus === 'LOW_CONFIDENCE'
@@ -130,6 +132,18 @@ function AnalysisReport({ data, standards, onReset }) {
           <span>{data.totalScore == null ? '점수 보류' : '/ 100'}</span>
         </div>
       </header>
+
+      <section className="priority-overview" aria-label="핵심 교정 요약">
+        <div className="panel priority-good">
+          <h3>잘한 점</h3>
+          <p>{goodEvents.length ? goodEvents[0].detail : '자동으로 확인된 우수 구간이 없습니다. 영상을 확인하세요.'}</p>
+        </div>
+        <div className="panel priority-focus">
+          <h3>먼저 교정할 점</h3>
+          <p>{focusEvents.length ? focusEvents[0].detail : '중요 교정 이벤트가 발견되지 않았습니다. 분석의 정확도는 지도자와 확인하세요.'}</p>
+        </div>
+      </section>
+      <p className="metric-note">AITM 점수는 프로젝트 측정 기준에 따른 참고 점수입니다. 관절 검출 신뢰도는 자세 채점 정확도와 다릅니다.</p>
 
       <div className="report-grid">
         <section className="panel video-review-panel">
@@ -179,15 +193,7 @@ function AnalysisReport({ data, standards, onReset }) {
           </div>
         </section>
 
-        <aside className="panel metrics-panel">
-          <h3>측정 지표</h3>
-          <div className="metric-grid">
-            {metrics.map(([label, value]) => <div className="metric-card" key={label}><span>{label}</span><strong>{value}</strong></div>)}
-          </div>
-          <h3 className="subheading">점수 근거</h3>
-          <ScoreBreakdown value={data.scoreBreakdownJson} />
-          <p className="metric-note">회전 속도와 점프 높이는 단일 카메라 Pose 기반 추정치이며 계측 장비의 절대값과 동일하지 않습니다.</p>
-        </aside>
+
       </div>
 
       <section className="panel coaching-panel">
@@ -195,14 +201,27 @@ function AnalysisReport({ data, standards, onReset }) {
           <h3>AI 코칭</h3>
           <p className="coaching-text">{data.aiFeedback || '코칭 결과가 없습니다.'}</p>
         </div>
-        <div className="evidence-box">
-          <h4>근거 및 기준</h4>
+        <details className="evidence-box">
+          <summary>평가 기준과 출처 보기</summary>
           <span>기준 버전: {data.standardVersion || '-'}</span>
           <span>출처: {data.standardSourceName || '-'}</span>
           <span>검증 상태: {data.standardVerified ? '지도자/전문가 검증됨' : '프로젝트 기준 · 검증 전'}</span>
           {sources.map((source) => <span key={source}>{source}</span>)}
-        </div>
+        </details>
       </section>
+
+      <details className="panel expert-details">
+        <summary>전문 분석 보기 · 측정 지표와 점수 근거</summary>
+        <div className="metrics-panel">
+          <h3>측정 지표</h3>
+          <div className="metric-grid">
+            {metrics.map(([label, value]) => <div className="metric-card" key={label}><span>{label}</span><strong>{value}</strong></div>)}
+          </div>
+          <h3 className="subheading">점수 근거</h3>
+          <ScoreBreakdown value={data.scoreBreakdownJson} />
+          <p className="metric-note">회전 속도와 점프 높이는 단일 카메라 Pose 기반 추정치이며 계측 장비의 절대값과 동일하지 않습니다.</p>
+        </div>
+      </details>
 
       {warnings.length > 0 && <section className="panel warning-panel"><h3>촬영 품질 확인</h3>{warnings.map((warning) => <p key={warning}>• {warning}</p>)}</section>}
     </div>
