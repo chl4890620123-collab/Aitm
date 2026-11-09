@@ -38,12 +38,17 @@ public class AnalysisController {
     @PostMapping("/execute")
     public ResponseEntity<AnalysisResult> execute(@RequestBody AnalysisRequest request, Authentication auth) {
         request.setUserId(ownerId(auth));
+        // No local file or playback path may be supplied through JSON.
+        request.setPlaybackUrl(null);
+        request.setReferenceAnalysisUrl(null);
+        request.setReferencePlaybackUrl(null);
         return ResponseEntity.ok(analysisService.runAnalysisScenario(request));
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AnalysisResult> uploadAndAnalyze(
             @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "referenceFile", required = false) MultipartFile referenceFile,
             @RequestParam String moveType,
             @RequestParam(defaultValue = "PRECISION") String mode,
             @RequestParam(defaultValue = "upload") String sourceType,
@@ -53,7 +58,11 @@ public class AnalysisController {
             Authentication auth
     ) {
         VideoStorageService.StoredVideo stored = videoStorageService.store(file);
+        VideoStorageService.StoredVideo referenceStored = null;
         try {
+            if (referenceFile != null && !referenceFile.isEmpty()) {
+                referenceStored = videoStorageService.store(referenceFile);
+            }
             AnalysisRequest request = new AnalysisRequest();
             request.setUserId(ownerId(auth));
             request.setMoveType(moveType);
@@ -66,9 +75,16 @@ public class AnalysisController {
             request.setFileExtension(stored.extension());
             request.setVideoUrl(stored.analysisUri());
             request.setPlaybackUrl(stored.playbackUrl());
+            if (referenceStored != null) {
+                request.setReferenceAnalysisUrl(referenceStored.analysisUri());
+                request.setReferencePlaybackUrl(referenceStored.playbackUrl());
+            }
             return ResponseEntity.ok(analysisService.runAnalysisScenario(request));
         } catch (RuntimeException ex) {
             videoStorageService.deletePlaybackUrl(stored.playbackUrl());
+            if (referenceStored != null) {
+                videoStorageService.deletePlaybackUrl(referenceStored.playbackUrl());
+            }
             throw ex;
         }
     }
