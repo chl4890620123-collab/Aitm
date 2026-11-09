@@ -47,6 +47,7 @@ public class AnalysisController {
             @RequestParam String moveType,
             @RequestParam(defaultValue = "PRECISION") String mode,
             @RequestParam(defaultValue = "upload") String sourceType,
+            @RequestParam(required = false) String referenceVideoUrl,
             @RequestParam(required = false) Double cameraDistance,
             @RequestParam(required = false) Double cameraHeight,
             Authentication auth
@@ -57,6 +58,7 @@ public class AnalysisController {
             request.setUserId(ownerId(auth));
             request.setMoveType(moveType);
             request.setMode(mode);
+            request.setReferenceVideoUrl(referenceVideoUrl);
             request.setSourceType(sourceType);
             request.setCameraDistance(cameraDistance);
             request.setCameraHeight(cameraHeight);
