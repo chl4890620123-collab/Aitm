@@ -97,6 +97,15 @@ public class AnalysisService {
                         ? request.getPlaybackUrl()
                         : request.getVideoUrl()
         );
+        String reference = request.getReferenceVideoUrl();
+        if (reference != null && !reference.isBlank()) {
+            validateReferenceVideoUrl(reference);
+        } else {
+            TechnicalStandard entity = standardRepository.findByMoveType(request.getMoveType()).orElse(null);
+            reference = entity == null ? null : entity.getReferenceVideoUrl();
+            if (reference != null && !reference.isBlank()) validateReferenceVideoUrl(reference);
+        }
+        analyzedData.setReferenceVideoUrl(reference);
         analyzedData.setMoveType(request.getMoveType());
         analyzedData.setTotalScore(score.totalScore());
         analyzedData.setAnalysisStatus(score.status());
@@ -220,6 +229,18 @@ public class AnalysisService {
         }
         if (uri.getHost() == null || !isAllowedRemoteHost(uri.getHost())) {
             throw new SecurityException("허용되지 않은 외부 영상 호스트입니다.");
+        }
+    }
+
+    private void validateReferenceVideoUrl(String value) {
+        URI uri;
+        try { uri = URI.create(value); }
+        catch (IllegalArgumentException ex) { throw new IllegalArgumentException("참고 영상 URL이 올바르지 않습니다."); }
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        boolean youtube = host.equals("youtube.com") || host.endsWith(".youtube.com")
+                || host.equals("youtu.be") || host.equals("www.youtube-nocookie.com");
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || !youtube) {
+            throw new IllegalArgumentException("참고 영상에는 HTTPS 유튜브 링크만 사용할 수 있습니다.");
         }
     }
 
