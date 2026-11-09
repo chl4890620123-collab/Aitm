@@ -55,8 +55,8 @@ public class AnalysisService {
     public AnalysisResult runAnalysisScenario(AnalysisRequest request) {
         validateRequestSecurity(request);
 
-        if (request.getUserId() == null || !request.getUserId().matches("[0-9a-f]{64}")) {
-            throw new SecurityException("익명 사용자 식별 정보가 필요합니다.");
+        if (request.getUserId() == null || !request.getUserId().matches("[0-9]+")) {
+            throw new SecurityException("인증된 사용자 정보가 필요합니다.");
         }
         AnalysisSession session;
         if (request.getSessionId() != null) {
