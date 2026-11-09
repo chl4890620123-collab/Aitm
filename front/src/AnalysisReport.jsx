@@ -273,6 +273,7 @@ function AnalysisReport({ data, standards, onReset }) {
                 className="review-video"
                 src={mediaUrl(data.videoUrl)}
                 controls
+                preload="metadata"
                 playsInline
                 onTimeUpdate={(event) => updateVideoTime(event.currentTarget)}
                 onLoadedMetadata={(event) => { setDuration(event.currentTarget.duration || 0); syncCanvasSize(); }}
