@@ -38,3 +38,12 @@
 .advanced-video-source summary { cursor: pointer; font-weight: 700; }
 .advanced-video-source button { margin-top: 8px; border: 1px solid #d9deea; padding: 8px 12px; border-radius: 8px; background: #fff; color: #344054; cursor: pointer; }
 .advanced-video-source button.active { background: #172033; color: #fff; }
+
+.reference-input { margin-top: 16px; border-top: 1px solid #e5e9f1; padding-top: 18px; }
+.reference-input label { display: grid; gap: 8px; font-weight: 800; font-size: 13px; }
+.reference-input input { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid #d9deea; font: inherit; }
+.native-camera-capture { display: grid; justify-items: center; align-content: center; gap: 18px; min-height: 240px; padding: 24px; text-align: center; background: #f7f9fc; border: 1px dashed #cbd5e1; border-radius: 14px; }
+.native-camera-capture input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.native-camera-capture label { cursor: pointer; }
+.native-camera-capture p { color: #475467; font-size: 14px; }
+@media (max-width: 620px) { .intro-card h2 { font-size: 28px; } .camera-frame { min-height: 230px; } }
