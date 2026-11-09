@@ -18,4 +18,6 @@ public class AnalysisRequest {
     // Server-owned snapshot; never trust client-supplied standards.
     private String standardData;
     private String standardVersion;
+    // Optional YouTube reference for side-by-side visual coaching; never downloaded by the AI engine.
+    private String referenceVideoUrl;
 }
