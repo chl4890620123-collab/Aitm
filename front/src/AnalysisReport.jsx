@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AnalysisMetricsGraph from './AnalysisMetricsGraph';
+import { getYouTubeEmbed } from './youtube';
 import './AnalysisReport.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -46,6 +47,7 @@ function AnalysisReport({ data, standards, onReset }) {
   const canvasRef = useRef(null);
   const [duration, setDuration] = useState(0);
   const [displayRate, setDisplayRate] = useState(1);
+  const [showReference, setShowReference] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [overlayEnabled, setOverlayEnabled] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -59,7 +61,10 @@ function AnalysisReport({ data, standards, onReset }) {
   const poseFrames = useMemo(() => parseJson(data.poseFramesJson, []), [data.poseFramesJson]);
   const goodEvents = events.filter(event => event.severity === 'good');
   const focusEvents = events.filter(event => event.severity === 'warning');
-  const skillName = standards.find((item) => item.moveType === data.moveType)?.skillName || data.moveType || '태권도 기술';
+  const skill = standards.find(item => item.moveType === data.moveType);
+  const skillName = skill?.skillName || data.moveType || '태권도 기술';
+  const referenceUrl = data.referenceVideoUrl || skill?.referenceVideoUrl;
+  const referenceEmbed = getYouTubeEmbed(referenceUrl);
 
   useEffect(() => {
     if (!overlayEnabled || !canvasRef.current || poseFrames.length === 0) return;
@@ -211,7 +216,7 @@ function AnalysisReport({ data, standards, onReset }) {
         </div>
         <div className="score-ring" aria-label="참고 점수">
           <strong>{data.totalScore ?? '—'}</strong>
-          <span>{data.totalScore == null ? '점수 보류' : '/ 100'}</span>
+          <span>{data.totalScore == null ? '보류' : '참고 점수'}</span>
         </div>
       </header>
 
@@ -237,6 +242,24 @@ function AnalysisReport({ data, standards, onReset }) {
             <button onClick={onReset}>새 분석</button>
           </div>
 
+          {referenceEmbed && (
+            <section className="reference-compare" aria-label="사범 기준 영상">
+              <div className="reference-header">
+                <div><strong>유튜브 원본 기술 영상</strong><p>내 촬영 영상과 나란히 확인하는 시각적 참고 자료입니다. 관절값은 내 영상에서 측정합니다.</p></div>
+                <button type="button" onClick={() => setShowReference(value => !value)}>
+                  {showReference ? '기준 영상 접기' : '기준 영상 보기'}
+                </button>
+              </div>
+              {showReference && (
+                <div className="reference-video-frame">
+                  <iframe title={`${skillName} 유튜브 기준 영상`} src={referenceEmbed}
+                    loading="lazy" referrerPolicy="strict-origin-when-cross-origin"
+                    allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
+                </div>
+              )}
+            </section>
+          )}
+          <h4 className="own-video-title">내 촬영 영상 · 실제 관절 분석</h4>
           <div className="video-overlay-wrap">
             {data.videoUrl ? (
               <video
