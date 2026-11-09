@@ -35,11 +35,8 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    userId: 'guest_user',
     moveType: '',
     mode: 'PRECISION',
-    cameraDistance: 3,
-    cameraHeight: 120,
   });
 
   useEffect(() => {
@@ -108,6 +105,9 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
 
   const changeSource = (type) => {
     if (recording) stopRecording();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl('');
+    setSelectedFile(null);
     setSourceType(type);
     setError('');
   };
@@ -141,12 +141,9 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
       } else {
         const body = new FormData();
         body.append('file', selectedFile);
-        body.append('userId', formData.userId || 'guest_user');
         body.append('moveType', formData.moveType);
         body.append('mode', formData.mode);
         body.append('sourceType', sourceType);
-        body.append('cameraDistance', String(formData.cameraDistance || 3));
-        body.append('cameraHeight', String(formData.cameraHeight || 120));
         response = await axios.post(`${API_BASE_URL}/api/analysis/upload`, body);
       }
       onAnalysisComplete(response.data);
@@ -165,15 +162,15 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
     <div className="analysis-page">
       <section className="intro-card">
         <div>
-          <p className="section-kicker">영상 기반 실제 Pose 분석</p>
-          <h2>촬영하고, 느리게 다시 보고, 부족한 구간을 확인하세요.</h2>
-          <p>AITM은 영상에서 관절 좌표를 측정한 뒤 프로젝트 기준값과 비교합니다. LLM은 점수를 만들지 않고 코칭 설명만 담당합니다.</p>
+          <p className="section-kicker">3단계 자세 분석</p>
+          <h2>기술을 고르고, 촬영하고, 교정할 점을 확인하세요.</h2>
+          <p>분석 결과에서 잘한 점과 고쳐야 할 동작을 영상으로 확인할 수 있습니다.</p>
         </div>
       </section>
 
       <div className="analysis-layout">
         <section className="panel settings-panel">
-          <h3>1. 분석 설정</h3>
+          <h3>1. 태권도 기술 선택</h3>
           <label>
             분석 기술
             <select value={formData.moveType} onChange={(e) => setFormData({ ...formData, moveType: e.target.value })}>
@@ -181,26 +178,18 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
             </select>
           </label>
 
-          <div className="compact-grid">
-            <label>
-              촬영 거리(m)
-              <input type="number" min="1" max="8" step="0.5" value={formData.cameraDistance} onChange={(e) => setFormData({ ...formData, cameraDistance: Number(e.target.value) })} />
-            </label>
-            <label>
-              카메라 높이(cm)
-              <input type="number" min="50" max="200" step="5" value={formData.cameraHeight} onChange={(e) => setFormData({ ...formData, cameraHeight: Number(e.target.value) })} />
-            </label>
-          </div>
-
           {selectedSkill && <p className="helper-text">{selectedSkill.description}</p>}
 
-          <h3>2. 영상 입력</h3>
+          <h3>2. 영상 촬영 또는 업로드</h3>
           <div className="source-tabs">
             <button className={sourceType === 'camera' ? 'active' : ''} onClick={() => changeSource('camera')}>카메라</button>
             <button className={sourceType === 'file' ? 'active' : ''} onClick={() => changeSource('file')}>파일</button>
-            <button className={sourceType === 'url' ? 'active' : ''} onClick={() => changeSource('url')}>URL</button>
-          </div>
+           </div>
 
+          <details className="advanced-video-source">
+            <summary>고급 입력: 외부 영상 URL</summary>
+            <button type="button" className={sourceType === 'url' ? 'active' : ''} onClick={() => changeSource('url')}>직접 영상 URL 사용</button>
+          </details>
           <div className="capture-tip">
             <strong>촬영 팁</strong>
             <span>전신이 화면 안에 들어오고, 발이 잘리지 않도록 약 3m 거리에서 촬영하세요.</span>
@@ -253,7 +242,7 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
           {error && <div className="inline-error">{error}</div>}
 
           <button className="analyze-button" onClick={runAnalysis} disabled={loading || recording}>
-            {loading ? 'Pose 분석 중...' : '저장하고 평가하기'}
+            {loading ? '자세를 분석하는 중...' : '3. 자세 분석 시작'}
           </button>
         </section>
       </div>
