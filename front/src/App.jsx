@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import axios from 'axios';
-import AnalysisEngine from './AnalysisEngine';
-import AnalysisReport from './AnalysisReport';
-import HistoryPortal from './HistoryPortal';
-import AdminDashboard from './AdminDashboard';
+const AnalysisEngine = lazy(() => import('./AnalysisEngine'));
+const AnalysisReport = lazy(() => import('./AnalysisReport'));
+const HistoryPortal = lazy(() => import('./HistoryPortal'));
+const AdminDashboard = lazy(() => import('./AdminDashboard'));
 import AuthPanel from './AuthPanel';
-import AccountSettings from './AccountSettings';
+const AccountSettings = lazy(() => import('./AccountSettings'));
 import './App.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -118,6 +118,7 @@ function App() {
       {bootstrapError && <p className="system-banner error">{bootstrapError}</p>}
 
       <main className="page-container">
+        <Suspense fallback={<div className="center-state">필요한 화면을 불러오는 중...</div>}>
         {activeTab === 'analysis' && (
           analysisData ? (
             <AnalysisReport data={analysisData} standards={standards} onReset={() => setAnalysisData(null)} />
@@ -130,6 +131,7 @@ function App() {
         {activeTab === 'admin' && user.role === 'ADMIN' && (
           <AdminDashboard onStandardsChanged={fetchStandards} />
         )}
+        </Suspense>
       </main>
     </div>
   );
