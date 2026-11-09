@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import Webcam from 'react-webcam';
+// Load the desktop webcam library only when a camera preview is displayed.
+const Webcam = lazy(() => import('react-webcam'));
 import SkillGuide from './SkillGuide';
 import { getYouTubeVideoId } from './youtube';
 import './AnalysisEngine.css';
@@ -295,8 +296,10 @@ function AnalysisEngine({ standards, onAnalysisComplete }) {
                   {!cameraSecure && <div className="inline-error">웹캠 촬영은 HTTPS 또는 localhost에서 사용할 수 있습니다.</div>}
                   {!previewUrl && cameraSecure && (
                     <div className="camera-frame">
-                      <Webcam ref={webcamRef} audio={false} mirrored={false}
-                        videoConstraints={{ facingMode: 'user', width: 960, height: 540 }} />
+                      <Suspense fallback={<p className="helper-text">카메라 준비 중...</p>}>
+                        <Webcam ref={webcamRef} audio={false} mirrored={false}
+                          videoConstraints={{ facingMode: 'user', width: 960, height: 540 }} />
+                      </Suspense>
                       {recording && <div className="record-badge">REC {recordSeconds}s / {MAX_RECORD_SECONDS}s</div>}
                     </div>
                   )}
