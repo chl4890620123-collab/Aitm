@@ -20,4 +20,7 @@ public class AnalysisRequest {
     private String standardVersion;
     // Optional YouTube reference for side-by-side visual coaching; never downloaded by the AI engine.
     private String referenceVideoUrl;
+    // Internal-only path to an uploaded comparison clip. Controller strips client values.
+    private String referenceAnalysisUrl;
+    private String referencePlaybackUrl;
 }
