@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import AnalysisMetricsGraph from './AnalysisMetricsGraph';
 import './AnalysisReport.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -43,11 +44,12 @@ function ScoreBreakdown({ value }) {
 function AnalysisReport({ data, standards, onReset }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [speed, setSpeed] = useState(0.5);
+  const [duration, setDuration] = useState(0);
+  const [displayRate, setDisplayRate] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [overlayEnabled, setOverlayEnabled] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [repeatSegment, setRepeatSegment] = useState(true);
+
 
   const events = useMemo(() => parseJson(data.analysisEventsJson, []), [data.analysisEventsJson]);
   const warnings = useMemo(() => parseJson(data.qualityWarningsJson, []), [data.qualityWarningsJson]);
@@ -82,35 +84,60 @@ function AnalysisReport({ data, standards, onReset }) {
     });
   }, [currentTime, overlayEnabled, poseFrames]);
 
-  const changeSpeed = (nextSpeed) => {
-    setSpeed(nextSpeed);
-    if (videoRef.current) videoRef.current.playbackRate = nextSpeed;
+  // Gradually slow the ORIGINAL video near an actual measured event; no
+  // slideshow frames, fake pauses, or transcoding. Normal speed resumes after.
+  const slowRateAt = (time, eventTime) => {
+    if (!Number.isFinite(eventTime)) return 1;
+    const distance = Math.abs(time - eventTime);
+    const normalized = Math.min(1, distance / 1.35);
+    const eased = normalized * normalized * (3 - 2 * normalized);
+    return 0.3 + 0.7 * eased;
   };
 
-  // The clip is derived from the model's real measured event timestamp.
-  // Keep original video untouched; only change HTMLVideoElement playback rate.
   const playEvidence = (event) => {
     const video = videoRef.current;
     if (!video || !Number.isFinite(Number(event.timeSec))) return;
     setSelectedEvent(event);
-    const start = Math.max(0, Number(event.timeSec) - 1);
-    video.currentTime = start;
-    video.playbackRate = speed;
+    video.currentTime = Math.max(0, Number(event.timeSec) - 1.6);
+    video.playbackRate = 1;
     video.play().catch(() => {});
   };
 
+  const scrubTo = (time, pause = true) => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (pause) video.pause();
+    const nextTime = Math.min(Number.isFinite(video.duration) ? video.duration : Number.MAX_SAFE_INTEGER,
+      Math.max(0, Number(time)));
+    video.currentTime = nextTime;
+    setCurrentTime(nextTime);
+    const closest = events.reduce((best, event) => (
+      Math.abs(Number(event.timeSec) - nextTime) < Math.abs(Number(best?.timeSec ?? Infinity) - nextTime)
+        ? event : best
+    ), null);
+    setSelectedEvent(closest && Math.abs(Number(closest.timeSec) - nextTime) < 1 ? closest : null);
+  };
+
   const updateVideoTime = (video) => {
-    setCurrentTime(video.currentTime);
-    if (!selectedEvent) return;
-    const stopAt = Math.min(video.duration || Infinity, Number(selectedEvent.timeSec) + 1.2);
-    if (video.currentTime >= stopAt) {
-      if (repeatSegment) {
-        video.currentTime = Math.max(0, Number(selectedEvent.timeSec) - 1);
-        if (video.paused) video.play().catch(() => {});
-      } else {
-        video.pause();
-      }
-    }
+    const time = video.currentTime;
+    setCurrentTime(time);
+    const eventTime = selectedEvent ? Number(selectedEvent.timeSec) : NaN;
+    const targetRate = slowRateAt(time, eventTime);
+    const nextRate = Math.max(0.3, Math.min(1, video.playbackRate + (targetRate - video.playbackRate) * 0.38));
+    if (Math.abs(nextRate - video.playbackRate) > 0.01) video.playbackRate = nextRate;
+    setDisplayRate(nextRate);
+    if (selectedEvent && time > eventTime + 2) setSelectedEvent(null);
+  };
+
+  const orderedEvents = [...events]
+    .filter(event => Number.isFinite(Number(event.timeSec)))
+    .sort((a, b) => Number(a.timeSec) - Number(b.timeSec));
+  const currentEventIndex = orderedEvents.findIndex(e => selectedEvent === e);
+  const moveEvent = (offset) => {
+    if (!orderedEvents.length) return;
+    const index = currentEventIndex < 0 ? (offset > 0 ? 0 : orderedEvents.length - 1)
+      : (currentEventIndex + offset + orderedEvents.length) % orderedEvents.length;
+    playEvidence(orderedEvents[index]);
   };
 
   const syncCanvasSize = () => {
@@ -144,9 +171,9 @@ function AnalysisReport({ data, standards, onReset }) {
         <div>
           <p className="section-kicker">POSE ANALYSIS REPORT</p>
           <h2>{skillName}</h2>
-          <p>{statusText} · 기준 {data.standardVersion || '-'} · {data.standardSourceName || '출처 미지정'}</p>
+          <p>{statusText} · 사범 훈련 분석 · 기준 {data.standardVersion || '-'}</p>
         </div>
-        <div className="score-ring">
+        <div className="score-ring" aria-label="참고 점수">
           <strong>{data.totalScore ?? '—'}</strong>
           <span>{data.totalScore == null ? '점수 보류' : '/ 100'}</span>
         </div>
@@ -183,49 +210,65 @@ function AnalysisReport({ data, standards, onReset }) {
                 controls
                 playsInline
                 onTimeUpdate={(event) => updateVideoTime(event.currentTarget)}
-                onLoadedMetadata={() => { changeSpeed(speed); syncCanvasSize(); }}
+                onLoadedMetadata={(event) => { setDuration(event.currentTarget.duration || 0); syncCanvasSize(); }}
                 onResize={syncCanvasSize}
               />
             ) : <div className="video-empty">저장된 영상이 없습니다.</div>}
             {data.videoUrl && <canvas ref={canvasRef} className={`pose-overlay ${overlayEnabled ? '' : 'hidden'}`} />}
           </div>
 
+          <div className="slide-motion-controls">
+            <div className="slide-motion-heading">
+              <strong>슬라이드하듯 동작 탐색</strong>
+              <span>{currentTime.toFixed(2)} / {Number.isFinite(duration) ? duration.toFixed(2) : '0.00'}초 · {displayRate.toFixed(2)}배속</span>
+            </div>
+            <input type="range" className="motion-slider" min="0" max={duration > 0 ? duration : 1}
+              step="0.033" value={Math.min(currentTime, duration > 0 ? duration : 1)}
+              aria-label="영상을 손가락으로 밀어 동작을 찾기"
+              onChange={e => scrubTo(Number(e.target.value))} disabled={!data.videoUrl || duration <= 0} />
+            <div className="motion-slider-actions">
+              <button type="button" onClick={() => moveEvent(-1)} disabled={!orderedEvents.length}>이전 동작</button>
+              <button type="button" onClick={() => {
+                const video = videoRef.current;
+                if (!video) return;
+                if (video.paused) video.play().catch(() => {});
+                else video.pause();
+              }}>재생 / 일시정지</button>
+              <button type="button" onClick={() => moveEvent(1)} disabled={!orderedEvents.length}>다음 동작</button>
+            </div>
+            <p className="metric-note">슬라이더를 밀면 영상 프레임이 이어서 바뀝니다. 동작 구간을 선택하면 문제 시점 근처에서 자연스럽게 약 0.3배속까지 느려졌다가 정상 속도로 돌아옵니다.</p>
+          </div>
           {selectedEvent && (
             <div className="evidence-active" role="status">
-              <strong>{selectedEvent.label} · 구간 증거</strong>
-              <span>측정 시점 {Number(selectedEvent.timeSec).toFixed(2)}초 · 전후 약 1초 재생</span>
+              <strong>{selectedEvent.label} · 실제 측정 시점 {Number(selectedEvent.timeSec).toFixed(2)}초</strong>
               <p>{selectedEvent.detail}</p>
-              <button type="button" onClick={() => playEvidence(selectedEvent)}>이 구간 다시 보기</button>
-              <button type="button" onClick={() => { setSelectedEvent(null); videoRef.current?.pause(); }}>전체 영상으로 돌아가기</button>
             </div>
           )}
           <div className="review-controls">
-            <div className="speed-controls">
-              <span>재생 속도</span>
-              {[0.25, 0.5, 1].map((value) => (
-                <button key={value} className={speed === value ? 'active' : ''} onClick={() => changeSpeed(value)}>{value}×</button>
-              ))}
-            </div>
-            <button className={overlayEnabled ? 'active' : ''} onClick={() => setOverlayEnabled((value) => !value)}>관절 위치 표시</button>
-            <label className="evidence-loop"><input type="checkbox" checked={repeatSegment} onChange={(e) => setRepeatSegment(e.target.checked)} /> 구간 반복</label>
+            <button className={overlayEnabled ? 'active' : ''} onClick={() => setOverlayEnabled(value => !value)}>관절 표시 {overlayEnabled ? '끄기' : '켜기'}</button>
           </div>
-
           <div className="event-list">
-            <h4>증거 구간별로 느리게 보기</h4>
-            <p className="metric-note">실제 관절 측정 시점만 표시합니다. 구간을 선택하면 앞뒤 약 1초를 기본 0.5배속으로 반복합니다.</p>
-            {events.length === 0 && <p className="empty-copy">표시할 분석 이벤트가 없습니다. 측정 근거 없이 단정하지 않습니다.</p>}
-            {[...events].sort((a, b) => (a.severity === 'warning' ? 0 : 1) - (b.severity === 'warning' ? 0 : 1)).map((event, index) => (
-              <button key={`${event.label}-${index}`} className={`event-card ${event.severity || ''} ${selectedEvent === event ? 'selected' : ''}`} onClick={() => playEvidence(event)}>
-                <span className="event-time">{Number(event.timeSec).toFixed(2)}s</span>
-                <span className="event-body"><strong>{event.severity === 'warning' ? '교정 필요 · ' : '측정 근거 · '}{event.label}</strong><small>{event.detail}</small></span>
-                <span className="event-action">0.5× 구간 재생</span>
-              </button>
-            ))}
+            <h4>동작 구간 슬라이드</h4>
+            <div className="motion-event-rail" aria-label="측정된 주요 동작">
+              {orderedEvents.map((event, index) => (
+                <button key={`${event.label}-${index}`} type="button"
+                  className={`event-card ${event.severity || ''} ${selectedEvent === event ? 'selected' : ''}`}
+                  onClick={() => playEvidence(event)}>
+                  <span className="event-time">{Number(event.timeSec).toFixed(2)}초</span>
+                  <span className="event-body"><strong>{event.label}</strong><small>{event.detail}</small></span>
+                  <span className="event-action">{event.severity === 'warning' ? '교정할 동작' : '기술 기준 확인'}</span>
+                </button>
+              ))}
+              {!orderedEvents.length && <p className="empty-copy">측정된 주요 동작이 없습니다. 분석 근거가 없어 임의의 동작을 표시하지 않습니다.</p>}
+            </div>
           </div>
         </section>
 
 
       </div>
+
+      <AnalysisMetricsGraph frames={poseFrames} snapshot={data.standardSnapshotJson}
+        selectedTime={currentTime} onSeek={time => scrubTo(time)} />
 
       <section className="panel coaching-panel">
         <div>
