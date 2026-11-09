@@ -6,5 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AnalysisResultRepository extends JpaRepository<AnalysisResult, Long> {
-    // 기본 CRUD 기능 제공
+    java.util.List<AnalysisResult> findBySession_UserIdOrderByResultIdDesc(String userId);
+    java.util.Optional<AnalysisResult> findByResultIdAndSession_UserId(Long resultId, String userId);
 }

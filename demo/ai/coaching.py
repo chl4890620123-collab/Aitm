@@ -55,8 +55,11 @@ def _fallback(metrics: Dict[str, Any], standard: Dict[str, float]) -> str:
     return " ".join(feedback) or "주요 측정 지표가 프로젝트 기준 범위에 들어옵니다. 같은 조건으로 반복 촬영해 일관성을 확인하세요."
 
 
-def generate_feedback(move_type: str, metrics: Dict[str, Any], standard: Dict[str, float]) -> Tuple[str, List[str]]:
+def generate_feedback(move_type: str, metrics: Dict[str, Any], standard: Dict[str, float], skip_llm: bool = False) -> Tuple[str, List[str]]:
     fallback = _fallback(metrics, standard)
+    if skip_llm:
+        # Fast review keeps all measured evidence but avoids network/RAG latency.
+        return fallback + " (빠른 검토: 측정 규칙 기반 코칭)", ["프로젝트 측정 규칙"]
     if not OPENAI_API_KEY:
         return fallback + " (LLM 미설정: 측정 규칙 기반 피드백)", ["프로젝트 측정 규칙"]
 

@@ -13,3 +13,6 @@
 .knowledge-count { margin-top: 16px; padding: 12px; border-radius: 10px; background: #f7f8fb; color: #667085; font-size: 13px; }
 @media (max-width: 850px) { .knowledge-grid { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
+
+.standard-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.standard-actions button { border: 1px solid #d5dce8; background: #fff; padding: 8px 12px; border-radius: 10px; font-weight: 750; cursor: pointer; }

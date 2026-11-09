@@ -93,6 +93,8 @@ jobs:
         run: |
           python -m compileall -q .
           python -c "import cv2, faiss, fastapi, langchain_community, langchain_openai, mediapipe, numpy, openai, pydantic, requests; import main"
+      - name: Test pose-comparison evidence math
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
 
   docker:
     runs-on: ubuntu-latest

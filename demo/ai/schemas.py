@@ -14,3 +14,9 @@ class AnalysisRequest(BaseModel):
     cameraHeight: Optional[float] = None
     fileSize: Optional[int] = None
     fileExtension: Optional[str] = None
+    # A single immutable standard snapshot from Spring for BOTH pose analysis and scoring.
+    standardData: Optional[str] = None
+    standardVersion: Optional[str] = None
+    referenceVideoUrl: Optional[str] = None
+    # Backend-provided optional uploaded comparison file, never a YouTube watch page.
+    referenceAnalysisUrl: Optional[str] = None

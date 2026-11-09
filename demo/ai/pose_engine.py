@@ -27,18 +27,30 @@ DEFAULT_STANDARD = {
 }
 
 
-def load_project_standard(move_type: str) -> Dict[str, float]:
-    standard = dict(DEFAULT_STANDARD)
+def standard_from_snapshot(raw_data: str | None) -> Dict[str, float]:
+    """Use exactly the standard selected by Spring for this analysis.
+
+    Never silently fall back to a different standard: the Java scoring step
+    uses the same stored snapshot, so any mismatch makes the result misleading.
+    """
+    if not raw_data:
+        raise HTTPException(status_code=422, detail="평가 기준 스냅샷이 없습니다.")
     try:
-        response = requests.get(f"{BACKEND_URL}/api/standards/{move_type}", timeout=3)
-        if response.ok and response.json().get("standardData"):
-            raw = json.loads(response.json()["standardData"])
-            for key, fallback in standard.items():
-                if key in raw:
-                    standard[key] = float(raw[key])
-    except Exception as exc:
-        print(f"[AITM] standard lookup failed: {exc}")
-    return standard
+        payload = json.loads(raw_data)
+        if not isinstance(payload, dict):
+            raise ValueError("standard must be an object")
+        standard = dict(DEFAULT_STANDARD)
+        for key in standard:
+            if key in payload:
+                value = float(payload[key])
+                if not math.isfinite(value) or value < 0:
+                    raise ValueError(key)
+                standard[key] = value
+        if standard["idealKneeMinDeg"] <= 0 or standard["minRotationVelocityDegSec"] <= 0:
+            raise ValueError("required positive thresholds")
+        return standard
+    except (ValueError, TypeError, OverflowError) as exc:
+        raise HTTPException(status_code=422, detail="평가 기준값이 올바르지 않습니다.") from exc
 
 
 def resolve_video_source(video_url: str) -> Tuple[str, Optional[str]]:
@@ -142,7 +154,7 @@ def _landing_index(times: np.ndarray, hip_y: np.ndarray, apex: int, body_height:
     return len(times) - 1
 
 
-def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
+def analyze_pose(video_path: str, standard: Dict[str, float], mode: str = "PRECISION") -> Dict[str, Any]:
     if not POSE_MODEL_PATH.is_file():
         raise HTTPException(status_code=503, detail="MediaPipe Pose 모델 파일이 없습니다.")
 
@@ -154,8 +166,13 @@ def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
     if fps <= 1 or not math.isfinite(fps):
         fps = 30.0
     total = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or fps * MAX_ANALYSIS_SECONDS)
-    limit = min(total, int(fps * MAX_ANALYSIS_SECONDS))
-    stride = max(1, int(round(fps / max(1.0, TARGET_ANALYSIS_FPS))))
+    quick = mode == "FAST"
+    # PRECISION preserves existing sampling and score semantics.
+    # FAST trades temporal detail for responsiveness; its limitation is explicit.
+    max_seconds = min(MAX_ANALYSIS_SECONDS, 20.0) if quick else MAX_ANALYSIS_SECONDS
+    analysis_fps = min(TARGET_ANALYSIS_FPS, 10.0) if quick else TARGET_ANALYSIS_FPS
+    limit = min(total, int(fps * max_seconds))
+    stride = max(1, int(round(fps / max(1.0, analysis_fps))))
 
     options = mp.tasks.vision.PoseLandmarkerOptions(
         base_options=mp.tasks.BaseOptions(model_asset_path=str(POSE_MODEL_PATH)),
@@ -173,12 +190,18 @@ def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
         with mp.tasks.vision.PoseLandmarker.create_from_options(options) as detector:
             frame_index = 0
             while frame_index < limit:
+                if frame_index % stride:
+                    # Skipped frames need not be fully decoded into numpy arrays.
+                    if not capture.grab():
+                        break
+                    frame_index += 1
+                    continue
                 ok, frame = capture.read()
                 if not ok:
                     break
-                if frame_index % stride:
-                    frame_index += 1
-                    continue
+                if quick and max(frame.shape[:2]) > 960:
+                    scale = 960.0 / max(frame.shape[:2])
+                    frame = cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
 
                 sampled += 1
                 timestamp_ms = int(round(frame_index / fps * 1000))
@@ -269,6 +292,8 @@ def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
     confidence = int(round(np.clip((detection_rate * 0.65 + average_visibility * 0.35) * 100.0, 0.0, 100.0)))
 
     warnings: List[str] = []
+    if quick:
+        warnings.append("빠른 분석: 관절 측정 빈도를 줄인 결과입니다. 미세한 회전·타이밍 평가에는 정밀 분석을 사용하세요.")
     if detection_rate < 0.8:
         warnings.append("일부 프레임에서 전신 Pose 검출이 끊겼습니다.")
     if average_visibility < 0.7:
@@ -317,9 +342,17 @@ def analyze_pose(video_path: str, standard: Dict[str, float]) -> Dict[str, Any]:
             timing_score,
         ))
 
+    # Reuse the same measured frames for both the overlay and the expert
+    # timeline graphs. No extra pose inference is required.
+    sample_stride = max(1, len(records) // 120)
     overlay_frames = [
-        {"timeSec": round(float(row["time"]), 2), "points": row["overlay"]}
-        for row in records[::max(1, len(records) // 120)]
+        {
+            "timeSec": round(float(row["time"]), 2),
+            "points": row["overlay"],
+            "kneeAngleDeg": round(float(row["knee"]), 1),
+            "hipRotationVelocityDegSec": round(abs(math.degrees(float(hip_velocity[index]))), 1),
+        }
+        for index, row in enumerate(records) if index % sample_stride == 0
     ]
 
     return {

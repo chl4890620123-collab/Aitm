@@ -54,11 +54,26 @@ public class AnalysisService {
     @Transactional
     public AnalysisResult runAnalysisScenario(AnalysisRequest request) {
         validateRequestSecurity(request);
+        validateReferenceAnalysisSource(request);
 
-        AnalysisSession session = request.getSessionId() != null
-                ? sessionRepository.findById(request.getSessionId())
-                    .orElseGet(() -> createDefaultSession(request))
-                : createDefaultSession(request);
+        if (request.getUserId() == null || !request.getUserId().matches("[0-9]+")) {
+            throw new SecurityException("인증된 사용자 정보가 필요합니다.");
+        }
+        AnalysisSession session;
+        if (request.getSessionId() != null) {
+            session = sessionRepository.findById(request.getSessionId())
+                    .orElseThrow(() -> new IllegalArgumentException("분석 세션을 찾을 수 없습니다."));
+            if (!request.getUserId().equals(session.getUserId())) {
+                throw new SecurityException("다른 사용자의 분석 세션에 접근할 수 없습니다.");
+            }
+        } else {
+            session = createDefaultSession(request);
+        }
+
+        // Snapshot once BEFORE calling Python; Python and Java now use the same revision.
+        StandardSnapshot standard = loadStandardSnapshot(request.getMoveType());
+        request.setStandardData((String) standard.snapshot().get("standardData"));
+        request.setStandardVersion(standard.version());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -74,7 +89,6 @@ public class AnalysisService {
             throw new IllegalStateException("AI 분석 엔진이 결과를 반환하지 않았습니다.");
         }
 
-        StandardSnapshot standard = loadStandardSnapshot(request.getMoveType());
         ScoreCalculator.ScoreResult score = scoreCalculator.calculate(analyzedData, standard.scoreStandard());
 
         analyzedData.setResultId(null);
@@ -84,6 +98,17 @@ public class AnalysisService {
                         ? request.getPlaybackUrl()
                         : request.getVideoUrl()
         );
+        String reference = request.getReferenceVideoUrl();
+        if (reference != null && !reference.isBlank()) {
+            validateReferenceVideoUrl(reference);
+        } else {
+            TechnicalStandard entity = standardRepository.findByMoveType(request.getMoveType()).orElse(null);
+            reference = entity == null ? null : entity.getReferenceVideoUrl();
+            if (reference != null && !reference.isBlank()) validateReferenceVideoUrl(reference);
+        }
+        analyzedData.setReferenceVideoUrl(reference);
+        // Trust only the path built by the upload controller, never the AI response.
+        analyzedData.setReferencePlaybackUrl(request.getReferencePlaybackUrl());
         analyzedData.setMoveType(request.getMoveType());
         analyzedData.setTotalScore(score.totalScore());
         analyzedData.setAnalysisStatus(score.status());
@@ -108,7 +133,7 @@ public class AnalysisService {
             snapshot.put("version", "fallback-0.1");
             snapshot.put("sourceName", "AITM fallback project baseline");
             snapshot.put("verified", false);
-            snapshot.put("standardData", "{\"idealKneeMinDeg\":90,\"minRotationVelocityDegSec\":280}");
+            snapshot.put("standardData", "{\"idealKneeMinDeg\":90,\"minRotationVelocityDegSec\":280,\"kneeToleranceDeg\":20,\"minLandingStabilityScore\":75,\"idealKneeToRotationMs\":180,\"timingToleranceMs\":180}");
             return new StandardSnapshot(defaults, "fallback-0.1", "AITM fallback project baseline", false, snapshot);
         }
 
@@ -163,7 +188,7 @@ public class AnalysisService {
 
     private AnalysisSession createDefaultSession(AnalysisRequest request) {
         AnalysisSession session = new AnalysisSession();
-        session.setUserId(request.getUserId() != null && !request.getUserId().isBlank() ? request.getUserId() : "guest_user");
+        session.setUserId(request.getUserId());
         session.setCamDistanceM(request.getCameraDistance() != null ? request.getCameraDistance() : 3.0);
         session.setCamHeightCm(request.getCameraHeight() != null ? request.getCameraHeight() : 120.0);
         return sessionRepository.save(session);
@@ -210,6 +235,45 @@ public class AnalysisService {
         }
     }
 
+    private void validateReferenceAnalysisSource(AnalysisRequest request) {
+        String source = request.getReferenceAnalysisUrl();
+        if (source == null || source.isBlank()) {
+            if (request.getReferencePlaybackUrl() != null) {
+                throw new SecurityException("비교 영상 파일이 없습니다.");
+            }
+            return;
+        }
+        if (request.getReferencePlaybackUrl() == null) {
+            throw new SecurityException("비교 영상 재생 경로가 없습니다.");
+        }
+        try {
+            URI uri = URI.create(source);
+            if (!"file".equalsIgnoreCase(uri.getScheme())) {
+                throw new SecurityException("비교 영상은 직접 업로드한 원본만 분석할 수 있습니다.");
+            }
+            Path root = Path.of(videoDirectory).toAbsolutePath().normalize();
+            Path target = Path.of(uri).toAbsolutePath().normalize();
+            if (!target.startsWith(root) || !java.nio.file.Files.isRegularFile(target)
+                    || !request.getReferencePlaybackUrl().equals("/media/" + target.getFileName())) {
+                throw new SecurityException("비교 영상의 저장 경로가 올바르지 않습니다.");
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new SecurityException("비교 영상 경로가 올바르지 않습니다.");
+        }
+    }
+
+    private void validateReferenceVideoUrl(String value) {
+        URI uri;
+        try { uri = URI.create(value); }
+        catch (IllegalArgumentException ex) { throw new IllegalArgumentException("참고 영상 URL이 올바르지 않습니다."); }
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        boolean youtube = host.equals("youtube.com") || host.endsWith(".youtube.com")
+                || host.equals("youtu.be") || host.equals("www.youtube-nocookie.com");
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || !youtube) {
+            throw new IllegalArgumentException("참고 영상에는 HTTPS 유튜브 링크만 사용할 수 있습니다.");
+        }
+    }
+
     private boolean isAllowedRemoteHost(String host) {
         String normalizedHost = host.toLowerCase(Locale.ROOT);
         return Arrays.stream(allowedVideoHosts.split(","))
@@ -220,13 +284,14 @@ public class AnalysisService {
     }
 
     @Transactional
-    public void deleteAnalysisResult(Long resultId) {
-        AnalysisResult result = resultRepository.findById(resultId)
-                .orElseThrow(() -> new IllegalArgumentException("분석 기록을 찾을 수 없습니다: " + resultId));
+    public void deleteAnalysisResult(Long resultId, String ownerId) {
+        AnalysisResult result = resultRepository.findByResultIdAndSession_UserId(resultId, ownerId)
+                .orElseThrow(() -> new java.util.NoSuchElementException("분석 기록을 찾을 수 없습니다."));
         String videoUrl = result.getVideoUrl();
         resultRepository.delete(result);
         resultRepository.flush();
         videoStorageService.deletePlaybackUrl(videoUrl);
+        videoStorageService.deletePlaybackUrl(result.getReferencePlaybackUrl());
     }
 
     private record StandardSnapshot(
