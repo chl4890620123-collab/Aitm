@@ -26,7 +26,8 @@ services:
     security_opt:
       - no-new-privileges:true
     cap_drop:
-      - ALL    environment:
+      - ALL
+    environment:
       AITM_AI_SECURE_TOKEN: ${AITM_AI_SECURE_TOKEN:?AITM_AI_SECURE_TOKEN is required}
       BACKEND_URL: http://backend:8080
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -42,7 +43,8 @@ services:
     security_opt:
       - no-new-privileges:true
     cap_drop:
-      - ALL    depends_on:
+      - ALL
+    depends_on:
       mariadb:
         condition: service_healthy
       ai:
