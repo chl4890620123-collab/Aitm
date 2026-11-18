@@ -22,6 +22,11 @@ services:
     build:
       context: ./demo/ai
     restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
       AITM_AI_SECURE_TOKEN: ${AITM_AI_SECURE_TOKEN:?AITM_AI_SECURE_TOKEN is required}
       BACKEND_URL: http://backend:8080
@@ -34,6 +39,11 @@ services:
     build:
       context: ./demo
     restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       mariadb:
         condition: service_healthy
