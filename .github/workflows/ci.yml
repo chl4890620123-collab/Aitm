@@ -117,6 +117,7 @@ jobs:
           AITM_DB_PASSWORD: ci-app-password
           AITM_AI_SECURE_TOKEN: ci-secure-token
         run: |
+          docker compose create
           ai_image="$(docker compose images -q ai)"
           frontend_image="$(docker compose images -q frontend)"
           test -n "$ai_image"
