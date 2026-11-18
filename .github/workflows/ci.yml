@@ -109,7 +109,7 @@ jobs:
           AITM_DB_ROOT_PASSWORD: ci-root-password
           AITM_DB_PASSWORD: ci-app-password
           AITM_AI_SECURE_TOKEN: ci-secure-token
-        run: docker compose build
+        run: docker compose build ai frontend
 
       - name: Verify AI container runs as non-root and nginx is patched
         env:
@@ -117,7 +117,7 @@ jobs:
           AITM_DB_PASSWORD: ci-app-password
           AITM_AI_SECURE_TOKEN: ci-secure-token
         run: |
-          docker compose create
+          docker compose create --no-deps ai frontend
           ai_image="$(docker compose images -q ai)"
           frontend_image="$(docker compose images -q frontend)"
           test -n "$ai_image"
