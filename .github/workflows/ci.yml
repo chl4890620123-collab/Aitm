@@ -110,3 +110,16 @@ jobs:
           AITM_DB_PASSWORD: ci-app-password
           AITM_AI_SECURE_TOKEN: ci-secure-token
         run: docker compose build
+
+      - name: Verify AI container runs as non-root and nginx is patched
+        env:
+          AITM_DB_ROOT_PASSWORD: ci-root-password
+          AITM_DB_PASSWORD: ci-app-password
+          AITM_AI_SECURE_TOKEN: ci-secure-token
+        run: |
+          ai_image="$(docker compose images -q ai)"
+          frontend_image="$(docker compose images -q frontend)"
+          test -n "$ai_image"
+          test -n "$frontend_image"
+          test "$(docker image inspect --format '{{.Config.User}}' "$ai_image")" = "10001:10001"
+          docker run --rm "$frontend_image" nginx -v 2>&1 | grep -q 'nginx/1.30.7'
